@@ -1,6 +1,6 @@
 async function renderBinUserDashboard() {
   // Fetch bins for dropdown
-  const bins = await getBins();
+    const bins = await getBins(); // Fetch bins for dropdown
   dashboardContent.innerHTML = `<h3>Bin User Dashboard</h3>
     <button id="openDepositModal" class="btn">Deposit E-Waste</button>
     <div id="history">Loading history...</div>
@@ -56,7 +56,7 @@ const dashboardContent = document.getElementById('dashboardContent');
 // Helper to render Collector dashboard
 async function renderCollectorDashboard() {
   // Fetch bins for dropdown
-  const bins = await getBins();
+  const bins = await getBins(); // Fetch bins for dropdown
   dashboardContent.innerHTML = `<h3>Collector Dashboard</h3>
     <button id="openCollectModal" class="btn">Mark Bin as Collected</button>
     <div id="collections">Loading collections...</div>
