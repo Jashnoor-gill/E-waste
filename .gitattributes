@@ -1,0 +1,2 @@
+Model/Model/*.pt filter=lfs diff=lfs merge=lfs -text
+Model/Model/*.pth filter=lfs diff=lfs merge=lfs -text
