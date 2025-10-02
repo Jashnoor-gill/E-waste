@@ -14,3 +14,23 @@ __pycache__/
 
 # OS
 Thumbs.db
+
+# Environment
+.env
+backend/.env
+# Node
+node_modules/
+.env
+.DS_Store
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# VS Code
+.vscode/
+
+# OS
+Thumbs.db
