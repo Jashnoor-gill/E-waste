@@ -1,0 +1,58 @@
+  <!-- Collection Modal -->
+  <div id="collectModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="closeCollectModal">×</button>
+      <h3>Mark Bin as Collected</h3>
+      <form id="collectFormModal">
+        <label for="collectBinSelectModal">Select Bin:</label>
+        <select id="collectBinSelectModal" required></select>
+        <label for="collectAmountInputModal">Amount (kg):</label>
+        <input type="number" id="collectAmountInputModal" min="0.1" step="0.1" required placeholder="e.g. 5">
+        <button type="submit" class="btn">Collect</button>
+      </form>
+    </div>
+  </div>
+  <!-- Deposit Modal -->
+  <div id="depositModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="closeDepositModal">×</button>
+      <h3>Deposit E-Waste</h3>
+      <form id="depositFormModal">
+        <label for="binSelectModal">Select Bin:</label>
+        <select id="binSelectModal" required></select>
+        <label for="amountInputModal">Amount (kg):</label>
+        <input type="number" id="amountInputModal" min="0.1" step="0.1" required placeholder="e.g. 2.5">
+        <button type="submit" class="btn">Deposit</button>
+      </form>
+    </div>
+  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | E-Waste Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <img src="https://img.icons8.com/fluency/48/000000/recycle-sign.png" alt="Logo" class="sidebar-logo" />
+      <span class="sidebar-title">E-Waste</span>
+    </div>
+    <ul class="sidebar-menu">
+      <li><a href="#" id="binUserTab"><span class="icon">👤</span> Bin User</a></li>
+      <li><a href="#" id="collectorTab"><span class="icon">🚚</span> Collector</a></li>
+      <li><a href="#" id="adminTab"><span class="icon">🛠️</span> Admin</a></li>
+      <li><a href="box-status.html"><span class="icon">📦</span> Box Status</a></li>
+      <li><a href="stats.html"><span class="icon">📊</span> Stats</a></li>
+      <li><a href="about.html"><span class="icon">📚</span> About</a></li>
+    </ul>
+  </div>
+  <main id="dashboardContent" class="main-content">
+    <!-- Dashboard content will be loaded here -->
+  </main>
+  <script type="module" src="notifications.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
