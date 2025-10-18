@@ -57,7 +57,7 @@ input, select, button, textarea {
 .sidebar {
   position: fixed;
   top: 0;
-  left: 0;
+  left: -220px;
   width: 220px;
   height: 100vh;
   background: #1a4d2e;
@@ -66,6 +66,10 @@ input, select, button, textarea {
   flex-direction: column;
   box-shadow: 2px 0 12px #0002;
   z-index: 100;
+  transition: left 0.3s ease;
+}
+.sidebar.visible {
+  left: 0;
 }
 .sidebar-header {
   display: flex;
@@ -109,30 +113,59 @@ input, select, button, textarea {
 .sidebar-menu .icon {
   font-size: 1.2rem;
 }
+/* Hamburger menu icon */
+.hamburger-menu {
+  position: fixed;
+  top: 1.5rem;
+  left: 1rem;
+  width: 40px;
+  height: 40px;
+  background: #1a4d2e;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 101;
+  box-shadow: 0 2px 8px #0003;
+  transition: background 0.2s;
+}
+.hamburger-menu:hover {
+  background: #388e3c;
+}
+.hamburger-menu span {
+  width: 24px;
+  height: 3px;
+  background: #fff;
+  border-radius: 2px;
+  transition: all 0.3s;
+}
 .main-content {
-  margin-left: 240px;
+  margin-left: 20px;
   padding: 2rem;
   max-width: 900px;
+  transition: margin-left 0.3s ease;
+}
+.main-content.sidebar-open {
+  margin-left: 240px;
 }
 @media (max-width: 900px) {
-  .main-content {
+  .main-content, .main-content.sidebar-open {
     margin-left: 0;
     padding: 1rem;
+    padding-top: 5rem;
   }
   .sidebar {
-    position: static;
     width: 100%;
-    height: auto;
-    flex-direction: row;
-    box-shadow: none;
+    left: -100%;
   }
-  .sidebar-menu {
-    flex-direction: row;
-    display: flex;
-    gap: 0.5rem 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    padding: 0.5rem 0.75rem;
+  .sidebar.visible {
+    left: 0;
+  }
+  .hamburger-menu {
+    top: 1rem;
   }
 }
 body {
