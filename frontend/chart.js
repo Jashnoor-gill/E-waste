@@ -13,7 +13,12 @@ export function renderBarChart(ctx, labels, data, label) {
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } }
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxRotation: 0, autoSkip: true } },
+          y: { beginAtZero: true }
+        }
       }
     });
   }
