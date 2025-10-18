@@ -337,3 +337,360 @@ a:hover {
   .modal-content form input,
   .modal-content form button { width: 100%; box-sizing: border-box; }
 }
+
+/* Enhanced Dashboard Styles */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #1a4d2e 0%, #388e3c 100%);
+  color: #fff;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(26, 77, 46, 0.2);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(26, 77, 46, 0.3);
+}
+
+.stat-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #b2ff59;
+}
+
+.stat-card .value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.stat-card .label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Rewards & Badges */
+.rewards-section {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin: 1.5rem 0;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
+}
+
+.rewards-section h3 {
+  margin: 0 0 1rem 0;
+  color: #1a4d2e;
+}
+
+.badges-container {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.badge {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  min-width: 100px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+}
+
+.badge-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.badge-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a4d2e;
+}
+
+.badge.locked {
+  opacity: 0.4;
+  filter: grayscale(100%);
+}
+
+/* Progress Ring */
+.progress-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+}
+
+.progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+  fill: none;
+  stroke-width: 8;
+}
+
+.progress-ring .bg {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.progress-ring .progress {
+  stroke: #b2ff59;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s;
+}
+
+.progress-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Bin Selection Cards */
+.bin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.bin-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.bin-card:hover {
+  border-color: #43a047;
+  box-shadow: 0 6px 20px rgba(67, 160, 71, 0.2);
+  transform: translateY(-3px);
+}
+
+.bin-card.selected {
+  border-color: #1a4d2e;
+  background: #f1f8f4;
+  box-shadow: 0 4px 16px rgba(26, 77, 46, 0.3);
+}
+
+.bin-card.full {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #ff5252;
+}
+
+.bin-card.full:hover {
+  transform: none;
+}
+
+.bin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.bin-location {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a4d2e;
+}
+
+.bin-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.bin-status-badge.available {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.bin-status-badge.full {
+  background: #ffcdd2;
+  color: #c62828;
+}
+
+.bin-capacity {
+  margin: 0.75rem 0;
+}
+
+.capacity-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.capacity-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.capacity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #43a047 0%, #66bb6a 100%);
+  border-radius: 4px;
+  transition: width 0.5s;
+}
+
+.capacity-fill.warning {
+  background: linear-gradient(90deg, #ff9800 0%, #ffb74d 100%);
+}
+
+.capacity-fill.full {
+  background: linear-gradient(90deg, #f44336 0%, #e57373 100%);
+}
+
+.bin-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.category-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Category Icons */
+.category-icon {
+  font-size: 1.2rem;
+  margin-right: 0.3rem;
+}
+
+/* E-Waste Category Selector */
+.category-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.category-option {
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.category-option:hover {
+  background: #e8f5e9;
+  border-color: #43a047;
+}
+
+.category-option.selected {
+  background: #c8e6c9;
+  border-color: #1a4d2e;
+}
+
+.category-option .icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.category-option .name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a4d2e;
+}
+
+/* Chart Container */
+.chart-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+}
+
+/* Impact Metrics */
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.impact-card {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  padding: 1.25rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.impact-card .icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.impact-card .value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1a4d2e;
+  margin: 0.5rem 0;
+}
+
+.impact-card .label {
+  font-size: 0.9rem;
+  color: #2e7d32;
+}
+
+/* Animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in-up {
+  animation: slideInUp 0.5s ease-out;
+}
