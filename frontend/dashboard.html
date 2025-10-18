@@ -35,7 +35,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="sidebar">
+  <div class="hamburger-menu" id="hamburgerMenu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <img src="https://img.icons8.com/fluency/48/000000/recycle-sign.png" alt="Logo" class="sidebar-logo" />
       <span class="sidebar-title">E-Waste</span>
@@ -52,6 +57,7 @@
   <main id="dashboardContent" class="main-content">
     <!-- Dashboard content will be loaded here -->
   </main>
+  <script src="sidebar.js"></script>
   <script type="module" src="notifications.js"></script>
   <script src="dashboard.js"></script>
 </body>
