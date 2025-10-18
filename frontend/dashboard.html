@@ -1,3 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | E-Waste Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
   <!-- Collection Modal -->
   <div id="collectModal" class="modal" style="display:none;">
     <div class="modal-content">
@@ -26,15 +35,6 @@
       </form>
     </div>
   </div>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard | E-Waste Management</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
   <div class="hamburger-menu" id="hamburgerMenu">
     <span></span>
     <span></span>
@@ -59,6 +59,9 @@
   </main>
   <script src="sidebar.js"></script>
   <script type="module" src="notifications.js"></script>
-  <script src="dashboard.js"></script>
+  <!-- Chart.js for charts used in dashboard-charts.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Load dashboard as an ES module so imports work -->
+  <script type="module" src="dashboard.js"></script>
 </body>
 </html>
