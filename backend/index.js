@@ -43,7 +43,7 @@ app.use('/api/stats', statRoutes);
 app.use('/api/notify', notifyRoutes);
 
 app.get('/', (req, res) => {
-  res.send('E-Waste Management & Recycling API');
+  res.sendFile(path.join(frontendDir, 'dashboard.html'));
 });
 
 // Socket.io connection
