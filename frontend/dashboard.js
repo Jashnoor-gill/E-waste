@@ -8,8 +8,8 @@ const dashboardContent = document.getElementById('dashboardContent');
 
 // Enhanced Bin User Dashboard with all new features
 async function renderBinUserDashboard() {
-  const bins = await getBins();
-  const events = await getEvents();
+  try {
+    const [bins, events] = await Promise.all([getBins(), getEvents()]);
   const userEvents = events.filter(e => e.type === 'deposit');
   
   // Calculate user statistics
@@ -163,6 +163,14 @@ async function renderBinUserDashboard() {
       createImpactChart('impactChart', impact);
     }
   }, 100);
+  } catch (err) {
+    console.error('Failed to load Bin User dashboard:', err);
+    dashboardContent.innerHTML = `
+      <div class="card" style="padding:1rem; border-left:4px solid #f44336">
+        <h3>Unable to load Bin User panel</h3>
+        <p>Please make sure the backend API is running and reachable, then try again.</p>
+      </div>`;
+  }
 }
 
 // Setup enhanced deposit modal with category selection and bin grid
@@ -279,6 +287,7 @@ function setupDepositModal(bins) {
 
 // Helper to render Collector dashboard
 async function renderCollectorDashboard() {
+  try {
   const bins = await getBins();
   dashboardContent.innerHTML = `
     <h2>🚚 Collector Dashboard</h2>
@@ -381,6 +390,14 @@ async function renderCollectorDashboard() {
       document.getElementById('pcbStatus').innerText = 'PCB recycling completed! (demo)';
     }, 2000);
   };
+  } catch (err) {
+    console.error('Failed to load Collector dashboard:', err);
+    dashboardContent.innerHTML = `
+      <div class="card" style="padding:1rem; border-left:4px solid #f44336">
+        <h3>Unable to load Collector panel</h3>
+        <p>Please make sure the backend API is running and reachable, then try again.</p>
+      </div>`;
+  }
 }
 
 // Helper to render Admin dashboard
@@ -575,9 +592,10 @@ async function renderAdminDashboard() {
   });
 }
 
-document.getElementById('binUserTab').onclick = renderBinUserDashboard;
-document.getElementById('collectorTab').onclick = renderCollectorDashboard;
-document.getElementById('adminTab').onclick = renderAdminDashboard;
+// Tab handlers with preventDefault to avoid anchor navigation
+document.getElementById('binUserTab').addEventListener('click', (e) => { e.preventDefault(); renderBinUserDashboard(); });
+document.getElementById('collectorTab').addEventListener('click', (e) => { e.preventDefault(); renderCollectorDashboard(); });
+document.getElementById('adminTab').addEventListener('click', (e) => { e.preventDefault(); renderAdminDashboard(); });
 
-// Default to Bin User
-window.onload = () => document.getElementById('binUserTab').click();
+// Default to Bin User on DOM ready
+window.addEventListener('DOMContentLoaded', () => { renderBinUserDashboard(); });
