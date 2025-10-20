@@ -1,12 +1,21 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
+import { mockUsers } from '../mockData.js';
 
 const router = express.Router();
 
 // Get all users (admin only)
 router.get('/', async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(mockUsers);
+    }
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.json(mockUsers);
+  }
 });
 
 // Get user by ID
