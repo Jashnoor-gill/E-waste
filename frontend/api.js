@@ -1,7 +1,6 @@
 // Simple API utility for frontend (mobile/LAN friendly)
 // If served over LAN (http://<PC_IP>:<port>), use that host for API as well.
-const HOST = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : 'localhost';
-const API_BASE = `http://${HOST}:5000/api`;
+const API_BASE = 'https://e-waste-backend-3qxc.onrender.com/api';
 
 export async function getBins() {
   const res = await fetch(`${API_BASE}/bins`);
