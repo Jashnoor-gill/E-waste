@@ -8,10 +8,8 @@ const router = express.Router();
 // Get all events
 router.get('/', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json(mockEvents);
-    }
     const events = await Event.find().populate('user bin');
+    if (!events || events.length === 0) return res.json(mockEvents);
     res.json(events);
   } catch (err) {
     res.json(mockEvents);

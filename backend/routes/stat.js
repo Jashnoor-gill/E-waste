@@ -8,10 +8,8 @@ const router = express.Router();
 // Get stats
 router.get('/', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json(mockStats);
-    }
     const stats = await Stat.findOne();
+    if (!stats) return res.json(mockStats);
     res.json(stats);
   } catch (err) {
     res.json(mockStats);
