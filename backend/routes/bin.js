@@ -8,10 +8,8 @@ const router = express.Router();
 // Get all bins
 router.get('/', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json(mockBins);
-    }
     const bins = await Bin.find();
+    if (!bins || bins.length === 0) return res.json(mockBins);
     res.json(bins);
   } catch (err) {
     res.json(mockBins);
