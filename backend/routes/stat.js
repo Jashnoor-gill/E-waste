@@ -1,12 +1,21 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Stat from '../models/Stat.js';
+import { mockStats } from '../mockData.js';
 
 const router = express.Router();
 
 // Get stats
 router.get('/', async (req, res) => {
-  const stats = await Stat.findOne();
-  res.json(stats);
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(mockStats);
+    }
+    const stats = await Stat.findOne();
+    res.json(stats);
+  } catch (err) {
+    res.json(mockStats);
+  }
 });
 
 // Update stats (admin only)

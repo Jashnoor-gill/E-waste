@@ -1,12 +1,21 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Event from '../models/Event.js';
+import { mockEvents } from '../mockData.js';
 
 const router = express.Router();
 
 // Get all events
 router.get('/', async (req, res) => {
-  const events = await Event.find().populate('user bin');
-  res.json(events);
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(mockEvents);
+    }
+    const events = await Event.find().populate('user bin');
+    res.json(events);
+  } catch (err) {
+    res.json(mockEvents);
+  }
 });
 
 // Create event

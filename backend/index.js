@@ -33,8 +33,12 @@ const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.log('⚠️  Server will continue running, but database features will not work.');
+    console.log('💡 Check your MongoDB connection string in .env file');
+  });
 
 app.use('/api/users', userRoutes);
 app.use('/api/bins', binRoutes);
