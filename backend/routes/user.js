@@ -8,10 +8,8 @@ const router = express.Router();
 // Get all users (admin only)
 router.get('/', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json(mockUsers);
-    }
     const users = await User.find();
+    if (!users || users.length === 0) return res.json(mockUsers);
     res.json(users);
   } catch (err) {
     res.json(mockUsers);
