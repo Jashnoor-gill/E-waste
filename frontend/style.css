@@ -18,6 +18,8 @@
   padding: 2rem;
   min-width: 320px;
   max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
   position: relative;
 }
 .modal-close {
