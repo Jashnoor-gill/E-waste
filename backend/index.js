@@ -43,7 +43,7 @@ app.use('/api/stats', statRoutes);
 app.use('/api/notify', notifyRoutes);
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendDir, 'dashboard.html'));
+  res.sendFile(path.join(frontendDir, 'index.html'));
 });
 
 // Socket.io connection
