@@ -1,12 +1,21 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Bin from '../models/Bin.js';
+import { mockBins } from '../mockData.js';
 
 const router = express.Router();
 
 // Get all bins
 router.get('/', async (req, res) => {
-  const bins = await Bin.find();
-  res.json(bins);
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(mockBins);
+    }
+    const bins = await Bin.find();
+    res.json(bins);
+  } catch (err) {
+    res.json(mockBins);
+  }
 });
 
 // Get bin by ID
