@@ -46,6 +46,7 @@
       <span class="sidebar-title">E-Waste</span>
     </div>
     <ul class="sidebar-menu">
+      <li><a href="index.html"><span class="icon">🏠</span> Home</a></li>
       <li><a href="#" id="binUserTab"><span class="icon">👤</span> Bin User</a></li>
       <li><a href="#" id="collectorTab"><span class="icon">🚚</span> Collector</a></li>
       <li><a href="#" id="adminTab"><span class="icon">🛠️</span> Admin</a></li>
@@ -59,7 +60,10 @@
   </main>
   <script src="sidebar.js"></script>
   <script type="module" src="notifications.js"></script>
-  <script src="dashboard.js"></script>
+  <!-- Chart.js for charts used in dashboard-charts.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Load dashboard as an ES module so imports work -->
+  <script type="module" src="dashboard.js"></script>
 </body>
 </html>
 
