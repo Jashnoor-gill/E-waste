@@ -1,7 +1,6 @@
 // Socket.io client for real-time updates
 import { io } from "https://cdn.socket.io/4.7.5/socket.io.esm.min.js";
 
-const HOST = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : 'localhost';
-const socket = io(`http://${HOST}:5000`);
+const socket = io('https://e-waste-backend-3qxc.onrender.com');
 
 export default socket;
