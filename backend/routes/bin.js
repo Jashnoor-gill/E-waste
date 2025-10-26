@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Bin from '../models/Bin.js';
 import { mockBins } from '../mockData.js';
+import { shouldUseMock } from '../utils/mockUtil.js';
 
 const router = express.Router();
 
@@ -9,10 +10,11 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const bins = await Bin.find();
-    if (!bins || bins.length === 0) return res.json(mockBins);
+    const useMock = shouldUseMock(req, !bins || bins.length === 0 || mongoose.connection.readyState !== 1);
+    if (useMock) return res.json(mockBins);
     res.json(bins);
   } catch (err) {
-    res.json(mockBins);
+    return res.json(mockBins);
   }
 });
 
