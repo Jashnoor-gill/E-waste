@@ -3,7 +3,10 @@
 const API_BASE = 'https://e-waste-backend-3qxc.onrender.com/api';
 
 function isMockEnabled() {
-  return typeof window !== 'undefined' && localStorage.getItem('USE_MOCK') === '1';
+  if (typeof window === 'undefined') return false;
+  const stored = localStorage.getItem('USE_MOCK');
+  // Default to ON (show mock data) if not explicitly set
+  return stored === null ? true : stored === '1';
 }
 
 function withMock(url) {
