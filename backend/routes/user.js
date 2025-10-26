@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { mockUsers } from '../mockData.js';
+import { shouldUseMock } from '../utils/mockUtil.js';
 
 const router = express.Router();
 
@@ -9,7 +10,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const users = await User.find();
-    if (!users || users.length === 0) return res.json(mockUsers);
+    const useMock = shouldUseMock(req, !users || users.length === 0 || mongoose.connection.readyState !== 1);
+    if (useMock) return res.json(mockUsers);
     res.json(users);
   } catch (err) {
     res.json(mockUsers);

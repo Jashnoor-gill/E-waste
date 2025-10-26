@@ -47,8 +47,8 @@
   background: linear-gradient(90deg, #43a047 0%, #b2ff59 100%);
   transition: width 0.4s;
 }
-/* Generic media-safe elements */
-img, canvas, video {
+  /* Generic media-safe elements */
+  img, canvas, video {
   max-width: 100%;
   height: auto;
 }
@@ -211,7 +211,7 @@ nav a:hover {
 }
 
 main, .main-content {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 2rem auto;
   padding: 2rem;
   background: #fff;
@@ -343,7 +343,7 @@ a:hover {
 /* Enhanced Dashboard Styles */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.5rem;
   margin: 1.5rem 0;
 }
@@ -472,7 +472,7 @@ a:hover {
 /* Bin Selection Cards */
 .bin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
   margin: 1rem 0;
 }
@@ -598,7 +598,7 @@ a:hover {
 /* E-Waste Category Selector */
 .category-selector {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 0.75rem;
   margin: 1rem 0;
 }
@@ -651,9 +651,54 @@ a:hover {
 /* Impact Metrics */
 .impact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
   margin: 1.5rem 0;
+}
+
+/* Large screens (laptops/desktops) */
+@media (min-width: 1200px) {
+  main, .main-content {
+    max-width: 1200px;
+    padding: 2.5rem;
+  }
+  .dashboard-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .dashboard-grid > * { grid-column: span 4; }
+  .dashboard-grid > .wide { grid-column: span 8; }
+}
+
+/* Medium screens (tablets) */
+@media (max-width: 900px) {
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.1rem; }
+  .stat-card .value { font-size: 2rem; }
+  .impact-card .value { font-size: 1.6rem; }
+  .progress-ring { width: 100px; height: 100px; }
+}
+
+/* Small screens (phones) */
+@media (max-width: 600px) {
+  .sidebar-menu a { padding: 0.9rem 1.25rem; font-size: 1.05rem; }
+  .dashboard-tabs { flex-wrap: wrap; gap: 0.5rem; }
+  .dashboard-tabs button { padding: 0.6rem 1rem; font-size: 0.95rem; }
+  main, .main-content { margin: 0.75rem; padding: 0.75rem; }
+  .card, .bin-status { padding: 0.9rem; }
+  .stat-card .value { font-size: 1.7rem; }
+  .badge { min-width: 88px; padding: 0.75rem; }
+  .badge-icon { font-size: 2rem; }
+  .progress-ring { width: 96px; height: 96px; }
+  .modal-content { padding: 1rem; max-width: 95vw; }
+  button, .btn { width: 100%; }
+  #boxStatusGrid, #bins { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .hamburger-menu { width: 36px; height: 36px; gap: 5px; }
+  .hamburger-menu span { width: 22px; height: 3px; }
+  .sidebar-title { font-size: 1.1rem; }
+  .sidebar-header { padding: 1.2rem 0.8rem 0.8rem; }
+  .modal-content { min-width: auto; }
 }
 
 .impact-card {

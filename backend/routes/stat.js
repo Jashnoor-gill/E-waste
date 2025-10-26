@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Stat from '../models/Stat.js';
 import { mockStats } from '../mockData.js';
+import { shouldUseMock } from '../utils/mockUtil.js';
 
 const router = express.Router();
 
@@ -9,7 +10,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const stats = await Stat.findOne();
-    if (!stats) return res.json(mockStats);
+    const useMock = shouldUseMock(req, !stats || mongoose.connection.readyState !== 1);
+    if (useMock) return res.json(mockStats);
     res.json(stats);
   } catch (err) {
     res.json(mockStats);
