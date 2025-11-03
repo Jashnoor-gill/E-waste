@@ -27,6 +27,60 @@ def connect():
 def disconnect():
     print('Disconnected')
 
+
+def attempt_register(payload, max_retries=6):
+    """Attempt to register device with exponential backoff until register_success is received."""
+    backoff = 1.0
+    attempt = 0
+    while attempt < max_retries:
+        attempt += 1
+        try:
+            print(f'Attempting register attempt={attempt}...')
+            sio.emit('register_device', payload)
+            # wait for either register_success or register_error within timeout
+            got = {'ok': None}
+
+            def on_success(d):
+                got['ok'] = True
+
+            def on_error(d):
+                got['ok'] = False
+
+            sio.on('register_success', on_success)
+            sio.on('register_error', on_error)
+
+            timeout = backoff + 2
+            waited = 0.0
+            interval = 0.25
+            while waited < timeout:
+                if got['ok'] is not None:
+                    break
+                time.sleep(interval)
+                waited += interval
+
+            # remove handlers
+            try:
+                sio.off('register_success')
+                sio.off('register_error')
+            except Exception:
+                pass
+
+            if got['ok'] is True:
+                print('Registration succeeded')
+                return True
+            if got['ok'] is False:
+                print('Registration rejected by server')
+            else:
+                print('No response, will retry')
+        except Exception as e:
+            print('Register attempt error', e)
+
+        time.sleep(backoff)
+        backoff = min(backoff * 2, 30)
+
+    print('Failed to register after retries')
+    return False
+
 @sio.on('capture')
 def on_capture(data):
     print('Capture command received', data)
@@ -88,7 +142,16 @@ if __name__ == '__main__':
     TOKEN = args.token or os.environ.get('DEVICE_TOKEN') or os.environ.get('DEVICE_TOK')
     if TOKEN:
         register_payload['token'] = TOKEN
-    sio.emit('register_device', register_payload)
+
+    ok = attempt_register(register_payload)
+    if not ok:
+        print('Device failed to register. Exiting.')
+        try:
+            sio.disconnect()
+        except Exception:
+            pass
+        raise SystemExit(1)
+
     print('Registered device name', DEVICE_NAME)
     try:
         sio.wait()

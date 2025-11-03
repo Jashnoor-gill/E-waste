@@ -439,6 +439,61 @@ async function renderAdminDashboard() {
       <div id="analytics"></div>
     </div>`;
 
+  // Connected devices & token management (admin only UI hooks)
+  const devicesContainerHtml = `
+    <div class="chart-container" style="margin-top:1rem">
+      <h3>Connected Devices</h3>
+      <div id="adminDevices">Loading devices...</div>
+    </div>
+    <div class="chart-container" style="margin-top:1rem">
+      <h3>Device Tokens</h3>
+      <div id="adminDeviceTokens">Loading tokens...</div>
+      <div style="margin-top:.5rem">
+        <input id="newDeviceTokenInput" placeholder="New token" style="width:60%; margin-right:.5rem" />
+        <button id="addDeviceTokenBtn" class="btn">Add Token</button>
+      </div>
+    </div>`;
+  dashboardContent.insertAdjacentHTML('beforeend', devicesContainerHtml);
+
+  // Load devices and tokens if admin token provided via prompt (simple flow)
+  const adminToken = localStorage.getItem('ADMIN_TOKEN') || null;
+  const adminDevicesEl = document.getElementById('adminDevices');
+  const adminDeviceTokensEl = document.getElementById('adminDeviceTokens');
+  if (!adminToken) {
+    adminDevicesEl.innerHTML = '<i>Provide admin token to view connected devices.</i>';
+    adminDeviceTokensEl.innerHTML = '<i>Provide admin token to manage tokens.</i>';
+  } else {
+    try {
+      const [devices, tokens] = await Promise.all([getDevices(adminToken), getDeviceTokens(adminToken)]);
+      adminDevicesEl.innerHTML = (Array.isArray(devices) && devices.length) ? devices.map(d=>`<div class="card" style="margin:.25rem 0; padding:.5rem; display:flex; justify-content:space-between"><div>${d.name}</div><div style="font-size:.8rem;color:#666">${d.socketId}</div></div>`).join('') : '<i>No devices connected</i>';
+      adminDeviceTokensEl.innerHTML = (Array.isArray(tokens) && tokens.length) ? tokens.map(t=>`<div style="display:flex; gap:.5rem; align-items:center; margin:.25rem 0"><div style="flex:1; word-break:break-all">${t}</div><button class="btn" data-token="${t}" data-action="removeToken">Remove</button></div>`).join('') : '<i>No persisted tokens</i>';
+
+      // wire remove token buttons
+      adminDeviceTokensEl.querySelectorAll('button[data-action="removeToken"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const token = btn.getAttribute('data-token');
+          if (!confirm('Remove token?')) return;
+          try { await removeDeviceToken(adminToken, token); alert('Removed'); renderAdminDashboard(); } catch (err) { alert('Failed: '+err.message); }
+        });
+      });
+    } catch (err) {
+      adminDevicesEl.innerHTML = `<div class="card" style="padding:.5rem; color:#c62828">Failed to load devices: ${err.message}</div>`;
+      adminDeviceTokensEl.innerHTML = `<div class="card" style="padding:.5rem; color:#c62828">Failed to load tokens: ${err.message}</div>`;
+    }
+  }
+
+  document.getElementById('addDeviceTokenBtn').addEventListener('click', async () => {
+    const token = document.getElementById('newDeviceTokenInput').value.trim();
+    if (!token) return alert('Enter token');
+    const at = localStorage.getItem('ADMIN_TOKEN');
+    if (!at) {
+      if (!confirm('No admin token set. Save ADMIN_TOKEN in localStorage now?')) return;
+      localStorage.setItem('ADMIN_TOKEN', token);
+      return alert('ADMIN_TOKEN saved to localStorage. Reload and try again.');
+    }
+    try { await addDeviceToken(at, token); alert('Token added'); renderAdminDashboard(); } catch (err) { alert('Failed: '+err.message); }
+  });
+
   const [users, bins, stats] = await Promise.all([getUsers(), getBins(), getStats()]);
   document.getElementById('analytics').innerHTML = `<b>Total E-Waste:</b> ${stats?.totalEwaste || 0} kg<br><b>CO₂ Saved:</b> ${stats?.co2Saved || 0} kg`;
 
