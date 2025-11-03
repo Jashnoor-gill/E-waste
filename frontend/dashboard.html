@@ -60,11 +60,17 @@
     <section class="card" style="margin-bottom:1rem;">
       <h3>IoT Camera / Model (Test)</h3>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <button id="iotCaptureBtn" class="btn">Capture Photo</button>
-        <button id="iotRunModelBtn" class="btn">Run Model</button>
+        <button id="iotCaptureBtn" class="btn">Capture Photo (Pi)</button>
+        <button id="iotRunModelBtn" class="btn">Run Model (Pi)</button>
+        <button id="webcamStartBtn" class="btn">Start Camera</button>
+        <button id="webcamCaptureBtn" class="btn">Capture from Camera</button>
+        <button id="webcamStopBtn" class="btn">Stop Camera</button>
         <div id="iotModelResult" style="white-space:pre-wrap; font-family:monospace; background:#f4f6f8; padding:0.5rem; border-radius:8px; margin-left:8px; min-width:180px;">Result will appear here</div>
       </div>
       <div id="iotImageContainer" style="margin-top:0.75rem;"></div>
+      <div style="margin-top:0.75rem;">
+        <video id="webcamVideo" autoplay playsinline style="max-width:360px; border-radius:8px; display:none; background:#000"></video>
+      </div>
     </section>
   </main>
   <script src="sidebar.js"></script>
