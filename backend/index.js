@@ -20,6 +20,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// Device registry for connected IoT devices (key: deviceName, value: socketId)
+const devices = new Map();
+
+app.set('io', io);
+app.set('devices', devices);
+
 app.use(cors());
 app.use(express.json());
 
@@ -45,6 +51,8 @@ app.use('/api/bins', binRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/stats', statRoutes);
 app.use('/api/notify', notifyRoutes);
+import iotRoutes from './routes/iot.js';
+app.use('/api/iot', iotRoutes);
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(frontendDir, 'index.html'));
@@ -53,6 +61,39 @@ app.get('/', (req, res) => {
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('Socket connected:', socket.id);
+
+  // Device registers itself with a name, e.g. { name: 'raspi-1' }
+  socket.on('register_device', (data) => {
+    try {
+      const name = (data && data.name) || `device-${socket.id}`;
+      devices.set(name, socket.id);
+      console.log('Device registered:', name, socket.id);
+      // notify admin clients
+      io.emit('device-registered', { name, socketId: socket.id });
+    } catch (err) {
+      console.error('register_device error', err);
+    }
+  });
+
+  // Relay photo events from device to all connected clients
+  socket.on('iot-photo', (payload) => {
+    io.emit('iot-photo', payload);
+  });
+
+  socket.on('iot-model-result', (payload) => {
+    io.emit('iot-model-result', payload);
+  });
+
+  socket.on('disconnect', () => {
+    // remove device(s) matching this socket id
+    for (const [name, id] of devices.entries()) {
+      if (id === socket.id) {
+        devices.delete(name);
+        console.log('Device disconnected:', name);
+        io.emit('device-disconnected', { name });
+      }
+    }
+  });
 });
 
 // Example: emit bin status update on bin update
