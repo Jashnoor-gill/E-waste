@@ -77,10 +77,12 @@ io.on('connection', (socket) => {
         socket.emit('register_error', { error: 'invalid_token' });
         return;
       }
-      devices.set(name, socket.id);
-      console.log('Device registered:', name, socket.id);
-      // notify admin clients
-      io.emit('device-registered', { name, socketId: socket.id });
+  devices.set(name, socket.id);
+  console.log('Device registered:', name, socket.id);
+  // notify admin clients
+  io.emit('device-registered', { name, socketId: socket.id });
+  // let device know registration succeeded
+  try { socket.emit('register_success', { name }); } catch (e) { /* ignore */ }
     } catch (err) {
       console.error('register_device error', err);
     }
