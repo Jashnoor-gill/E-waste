@@ -61,6 +61,19 @@ def on_run_model(data):
         print('Run model failed', e)
         sio.emit('iot-model-result', { 'requestId': requestId, 'error': str(e), 'device': DEVICE_NAME })
 
+
+@sio.on('actuate')
+def on_actuate(data):
+    print('Actuate command received', data)
+    requestId = data.get('requestId')
+    try:
+        out = subprocess.check_output(['python', 'actuate.py'])
+        result = out.decode().strip()
+        sio.emit('iot-model-result', { 'requestId': requestId, 'result': {'actuate': result}, 'device': DEVICE_NAME })
+    except Exception as e:
+        print('Actuate failed', e)
+        sio.emit('iot-model-result', { 'requestId': requestId, 'error': str(e), 'device': DEVICE_NAME })
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', default='raspi-1')
@@ -70,8 +83,15 @@ if __name__ == '__main__':
     SERVER = args.server
 
     sio.connect(SERVER)
-    # register device name
-    sio.emit('register_device', {'name': DEVICE_NAME})
+    # register device name (include token if provided)
+    register_payload = {'name': DEVICE_NAME}
+    try:
+        TOKEN = os.environ.get('DEVICE_TOKEN') or os.environ.get('DEVICE_TOK')
+    except Exception:
+        TOKEN = None
+    if TOKEN:
+        register_payload['token'] = TOKEN
+    sio.emit('register_device', register_payload)
     print('Registered device name', DEVICE_NAME)
     try:
         sio.wait()
