@@ -58,6 +58,10 @@ import iotRoutes from './routes/iot.js';
 app.use('/api/iot', iotRoutes);
 import deviceMgmt from './routes/device_mgmt.js';
 app.use('/api/device-mgmt', deviceMgmt);
+import iotMock from './routes/iot_mock.js';
+app.use('/api/iot/mock', iotMock);
+import modelUpload from './routes/model_upload.js';
+app.use('/api/model', modelUpload);
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(frontendDir, 'index.html'));
