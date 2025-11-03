@@ -78,17 +78,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', default='raspi-1')
     parser.add_argument('--server', default='https://e-waste-backend-3qxc.onrender.com')
+    parser.add_argument('--token', default=None, help='Device registration token (overrides DEVICE_TOKEN env)')
     args = parser.parse_args()
     DEVICE_NAME = args.name
     SERVER = args.server
-
     sio.connect(SERVER)
-    # register device name (include token if provided)
+    # register device name (include token provided via CLI or env)
     register_payload = {'name': DEVICE_NAME}
-    try:
-        TOKEN = os.environ.get('DEVICE_TOKEN') or os.environ.get('DEVICE_TOK')
-    except Exception:
-        TOKEN = None
+    TOKEN = args.token or os.environ.get('DEVICE_TOKEN') or os.environ.get('DEVICE_TOK')
     if TOKEN:
         register_payload['token'] = TOKEN
     sio.emit('register_device', register_payload)

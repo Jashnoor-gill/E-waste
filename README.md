@@ -28,6 +28,29 @@ A full-stack platform for managing e-waste collection, recycling, and awareness.
 	npm install
 	```
 3. Copy `.env.example` to `.env` and fill in your credentials
+
+## IoT Device Tokens
+
+To secure device registration, you can configure one or more device tokens in your backend environment. Set `DEVICE_TOKENS` (comma-separated) in your backend `.env` or in Render environment variables. When set, IoT devices must send a token during registration.
+
+Example in `.env`:
+
+```
+DEVICE_TOKENS=raspi-secret-token,another-token
+```
+
+On the Pi, provide the token either via environment variable or CLI:
+
+```bash
+export DEVICE_TOKEN=raspi-secret-token
+python iot/pi_client.py --name raspi-1
+```
+
+Or with CLI option:
+
+```bash
+python iot/pi_client.py --name raspi-1 --token raspi-secret-token
+```
 4. Start backend:
 	```
 	npm run dev
