@@ -23,13 +23,17 @@ function setupUi() {
 
   socket.on('iot-photo', (payload) => {
     console.log('Received iot-photo', payload);
+    showCaptureLoading(false);
     if (imgContainer && payload && payload.imageBase64) {
       imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${payload.imageBase64}" style="max-width:100%; border-radius:8px;"/>`;
+    } else if (imgContainer && payload && payload.error) {
+      imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Capture error: ${payload.error}</div>`;
     }
   });
 
   socket.on('iot-model-result', (payload) => {
     console.log('Received iot-model-result', payload);
+    showModelLoading(false);
     if (resultContainer) {
       resultContainer.textContent = JSON.stringify(payload, null, 2);
     }
@@ -38,10 +42,14 @@ function setupUi() {
 
 async function requestCapture() {
   try {
-    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    // include our socket id so server can route the response only to us
+    const body = { replySocketId: socket.id };
+    // show a simple loading state
+    showCaptureLoading(true);
+    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('capture requested', data);
-    alert('Capture requested — waiting for device to respond.');
+    // waiting for 'iot-photo' event
   } catch (err) {
     console.error('capture request failed', err);
     alert('Capture request failed: ' + err.message);
@@ -50,14 +58,27 @@ async function requestCapture() {
 
 async function requestRunModel() {
   try {
-    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/run-model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    const body = { replySocketId: socket.id };
+    showModelLoading(true);
+    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/run-model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('run-model requested', data);
-    alert('Run model requested — waiting for device to respond.');
   } catch (err) {
     console.error('run model request failed', err);
     alert('Run model request failed: ' + err.message);
   }
+}
+
+function showCaptureLoading(show) {
+  const imgContainer = document.getElementById('iotImageContainer');
+  if (!imgContainer) return;
+  if (show) imgContainer.innerHTML = `<div class="card" style="padding:1rem; text-align:center">Capturing... <div class="spinner" style="margin-top:0.5rem"></div></div>`;
+}
+
+function showModelLoading(show) {
+  const resultContainer = document.getElementById('iotModelResult');
+  if (!resultContainer) return;
+  if (show) resultContainer.textContent = 'Running model...';
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupUi);

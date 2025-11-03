@@ -25,6 +25,10 @@ router.post('/capture', async (req, res) => {
   if (!targetSocketId) return res.status(503).json({ error: 'No IoT device connected' });
 
   const requestId = makeReqId();
+  // map requestId -> reply socket id (if provided by caller)
+  const replySocketId = req.body && req.body.replySocketId;
+  const requestMap = req.app.get('requestMap');
+  if (replySocketId && requestMap) requestMap.set(requestId, { replySocketId, ts: Date.now() });
   io.to(targetSocketId).emit('capture', { requestId, metadata: req.body && req.body.metadata });
   return res.status(202).json({ requestId, message: 'Capture requested' });
 });
@@ -45,6 +49,9 @@ router.post('/run-model', async (req, res) => {
   if (!targetSocketId) return res.status(503).json({ error: 'No IoT device connected' });
 
   const requestId = makeReqId();
+  const replySocketId = req.body && req.body.replySocketId;
+  const requestMap = req.app.get('requestMap');
+  if (replySocketId && requestMap) requestMap.set(requestId, { replySocketId, ts: Date.now() });
   io.to(targetSocketId).emit('run_model', { requestId, params: req.body || {} });
   return res.status(202).json({ requestId, message: 'Run model requested' });
 });

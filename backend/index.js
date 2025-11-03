@@ -22,9 +22,12 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // Device registry for connected IoT devices (key: deviceName, value: socketId)
 const devices = new Map();
+// Map requestId => { replySocketId }
+const requestMap = new Map();
 
 app.set('io', io);
 app.set('devices', devices);
+app.set('requestMap', requestMap);
 
 app.use(cors());
 app.use(express.json());
@@ -66,6 +69,14 @@ io.on('connection', (socket) => {
   socket.on('register_device', (data) => {
     try {
       const name = (data && data.name) || `device-${socket.id}`;
+      // optional token validation
+      const token = data && data.token;
+      const allowed = (process.env.DEVICE_TOKENS || process.env.DEVICE_TOKEN || '').split(',').map(s=>s.trim()).filter(Boolean);
+      if (allowed.length > 0 && !allowed.includes(token)) {
+        console.warn('Device failed auth', name);
+        socket.emit('register_error', { error: 'invalid_token' });
+        return;
+      }
       devices.set(name, socket.id);
       console.log('Device registered:', name, socket.id);
       // notify admin clients
@@ -75,13 +86,33 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Relay photo events from device to all connected clients
+  // Relay photo events from device -> only to requester (if mapped)
   socket.on('iot-photo', (payload) => {
-    io.emit('iot-photo', payload);
+    try {
+      const rid = payload && payload.requestId;
+      if (rid && requestMap.has(rid)) {
+        const dest = requestMap.get(rid).replySocketId;
+        if (dest) io.to(dest).emit('iot-photo', payload);
+        // cleanup mapping
+        requestMap.delete(rid);
+        return;
+      }
+      // fallback: broadcast
+      io.emit('iot-photo', payload);
+    } catch (err) { console.error('iot-photo relay error', err); }
   });
 
   socket.on('iot-model-result', (payload) => {
-    io.emit('iot-model-result', payload);
+    try {
+      const rid = payload && payload.requestId;
+      if (rid && requestMap.has(rid)) {
+        const dest = requestMap.get(rid).replySocketId;
+        if (dest) io.to(dest).emit('iot-model-result', payload);
+        requestMap.delete(rid);
+        return;
+      }
+      io.emit('iot-model-result', payload);
+    } catch (err) { console.error('iot-model-result relay error', err); }
   });
 
   socket.on('disconnect', () => {
