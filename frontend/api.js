@@ -48,6 +48,27 @@ export async function getUsers() {
   return res.json();
 }
 
+// Device management API (admin)
+export async function getDevices(adminToken) {
+  const res = await fetch(`${API_BASE}/device-mgmt/devices`, { headers: { 'x-admin-token': adminToken } });
+  return res.json();
+}
+
+export async function getDeviceTokens(adminToken) {
+  const res = await fetch(`${API_BASE}/device-mgmt/tokens`, { headers: { 'x-admin-token': adminToken } });
+  return res.json();
+}
+
+export async function addDeviceToken(adminToken, token) {
+  const res = await fetch(`${API_BASE}/device-mgmt/tokens`, { method: 'POST', headers: { 'x-admin-token': adminToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+  return res.json();
+}
+
+export async function removeDeviceToken(adminToken, token) {
+  const res = await fetch(`${API_BASE}/device-mgmt/tokens/${encodeURIComponent(token)}`, { method: 'DELETE', headers: { 'x-admin-token': adminToken } });
+  return res.json();
+}
+
 // Bin management
 export async function createBin(data) {
   const res = await fetch(withMock(`${API_BASE}/bins`), {

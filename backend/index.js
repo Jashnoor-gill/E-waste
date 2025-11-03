@@ -56,6 +56,8 @@ app.use('/api/stats', statRoutes);
 app.use('/api/notify', notifyRoutes);
 import iotRoutes from './routes/iot.js';
 app.use('/api/iot', iotRoutes);
+import deviceMgmt from './routes/device_mgmt.js';
+app.use('/api/device-mgmt', deviceMgmt);
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(frontendDir, 'index.html'));
@@ -71,7 +73,18 @@ io.on('connection', (socket) => {
       const name = (data && data.name) || `device-${socket.id}`;
       // optional token validation
       const token = data && data.token;
-      const allowed = (process.env.DEVICE_TOKENS || process.env.DEVICE_TOKEN || '').split(',').map(s=>s.trim()).filter(Boolean);
+      // check persisted device tokens manager first
+      const deviceTokensManager = await (async () => {
+        try { const mod = await import('./utils/deviceTokens.js'); return mod; } catch (e) { return null; }
+      })();
+      let allowed = [];
+      try {
+        if (deviceTokensManager && deviceTokensManager.listTokens) allowed = deviceTokensManager.listTokens();
+      } catch (e) { allowed = []; }
+      // fallback to env if manager empty
+      if (!allowed || allowed.length === 0) {
+        allowed = (process.env.DEVICE_TOKENS || process.env.DEVICE_TOKEN || '').split(',').map(s=>s.trim()).filter(Boolean);
+      }
       if (allowed.length > 0 && !allowed.includes(token)) {
         console.warn('Device failed auth', name);
         socket.emit('register_error', { error: 'invalid_token' });
