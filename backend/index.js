@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
   console.log('Socket connected:', socket.id);
 
   // Device registers itself with a name, e.g. { name: 'raspi-1' }
-  socket.on('register_device', (data) => {
+  socket.on('register_device', async (data) => {
     try {
       const name = (data && data.name) || `device-${socket.id}`;
       // optional token validation
