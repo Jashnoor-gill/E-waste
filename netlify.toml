@@ -1,0 +1,9 @@
+[build]
+  command = "node scripts/generate_frontend_config.js"
+  publish = "frontend"
+
+[dev]
+  command = "node scripts/generate_frontend_config.js && npx http-server frontend -p 8888"
+  port = 8888
+
+# You can also add redirect rules or headers here if needed.

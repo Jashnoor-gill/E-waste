@@ -1,8 +1,12 @@
 import { io as ioClient } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
 import { getMockEnabled } from './api.js';
 
-// Connect to backend socket.io (same URL used in socket.js)
-const SOCKET_URL = 'https://e-waste-backend-3qxc.onrender.com';
+// Connect to backend socket.io. Use the current page origin so local dev points to local backend
+const DEFAULT_BACKEND = 'https://e-waste-backend-3qxc.onrender.com';
+// Allow an explicit runtime-configured backend (useful when frontend is hosted on Netlify)
+// You can create a small `config.js` that sets `window.BACKEND_URL = 'https://your-backend.onrender.com'`
+const ORIGIN = (typeof window !== 'undefined' && window.BACKEND_URL) ? window.BACKEND_URL : ((typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') ? window.location.origin : DEFAULT_BACKEND);
+const SOCKET_URL = ORIGIN;
 const socket = ioClient(SOCKET_URL);
 
 // Expose to window for quick debugging
@@ -15,6 +19,7 @@ function setupUi() {
   const webcamStartBtn = document.getElementById('webcamStartBtn');
   const webcamStopBtn = document.getElementById('webcamStopBtn');
   const webcamCaptureBtn = document.getElementById('webcamCaptureBtn');
+  const webcamOneClickBtn = document.getElementById('webcamOneClickBtn');
   const imgContainer = document.getElementById('iotImageContainer');
   const resultContainer = document.getElementById('iotModelResult');
 
@@ -23,6 +28,7 @@ function setupUi() {
   if (webcamStartBtn) webcamStartBtn.addEventListener('click', startWebcam);
   if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
   if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
+  if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
 
   socket.on('connect', () => {
     console.log('IoT socket connected', socket.id);
@@ -94,12 +100,14 @@ async function captureFromWebcam() {
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
 
   try {
-    const body = { image_b64: b64, replySocketId: socket.id };
+  const body = { image_b64: b64, replySocketId: socket.id };
     // if frontend mock mode is enabled, tell backend to return a canned result instead of calling PyTorch
     if (typeof getMockEnabled === 'function' && getMockEnabled()) {
       body.mock = true;
     }
-    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/run-model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // POST to same origin backend when available (local dev), otherwise fall back to DEFAULT_BACKEND
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('run-model (webcam) response', data);
     // backend will forward result to socket; also HTTP response contains result when ready
@@ -111,6 +119,54 @@ async function captureFromWebcam() {
     console.error('webcam run-model failed', err);
     alert('Run model failed: ' + (err.message || err));
     showModelLoading(false);
+  }
+}
+
+// One-click flow: start camera, capture one frame, send it, then stop camera.
+async function oneClickCapture() {
+  const v = document.getElementById(VIDEO_ID);
+  const imgContainer = document.getElementById('iotImageContainer');
+  try {
+    showModelLoading(true);
+    // start camera (will reuse if already started)
+    if (!v || !v.srcObject) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+      v.srcObject = stream;
+      // small delay to allow camera to warm up
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    // draw frame
+    const canvas = document.createElement('canvas');
+    canvas.width = v.videoWidth || 1280;
+    canvas.height = v.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const b64 = dataUrl.split(',')[1];
+    if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
+
+    const body = { image_b64: b64, replySocketId: socket.id };
+    if (typeof getMockEnabled === 'function' && getMockEnabled()) body.mock = true;
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data && data.result) renderModelResult(data.result);
+    showModelLoading(false);
+  } catch (err) {
+    console.error('oneClickCapture failed', err);
+    alert('Capture failed: ' + (err.message || err));
+    showModelLoading(false);
+  } finally {
+    // stop camera if we started it here
+    try {
+      const v2 = document.getElementById(VIDEO_ID);
+      if (v2 && v2.srcObject) {
+        const tracks = v2.srcObject.getTracks();
+        tracks.forEach(t => t.stop());
+        v2.srcObject = null;
+      }
+    } catch (e) { /* ignore */ }
   }
 }
 
@@ -138,7 +194,8 @@ async function requestCapture() {
     const body = { replySocketId: socket.id };
     // show a simple loading state
     showCaptureLoading(true);
-    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const captureUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/capture`;
+  const res = await fetch(captureUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('capture requested', data);
     // waiting for 'iot-photo' event
@@ -152,7 +209,8 @@ async function requestRunModel() {
   try {
     const body = { replySocketId: socket.id };
     showModelLoading(true);
-    const res = await fetch('https://e-waste-backend-3qxc.onrender.com/api/iot/run-model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('run-model requested', data);
   } catch (err) {

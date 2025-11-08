@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
 import base64
@@ -7,15 +8,33 @@ from PIL import Image
 import torch
 from torchvision import transforms
 import os
+import requests
+import shutil
+from urllib.parse import urlparse
+
+try:
+    import boto3
+except Exception:
+    boto3 = None
 
 app = FastAPI(title="E-waste Model Service")
+
+# Allow cross-origin requests from the frontend during local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 class InferRequest(BaseModel):
     image_b64: str
 
 
-MODEL_PATH = os.environ.get('MODEL_PATH') or str(Path(__file__).resolve().parents[2] / 'Final_DP' / 'Final_DP' / 'Model' / 'resnet50_ewaste_traced.pt')
+MODEL_PATH = os.environ.get('MODEL_PATH') or str(Path(__file__).resolve().parents[2] / 'Final_DP' / 'Model' / 'resnet50_ewaste_traced.pt')
+MODEL_DOWNLOAD_URL = os.environ.get('MODEL_DOWNLOAD_URL') or os.environ.get('MODEL_S3_URL')
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -27,13 +46,68 @@ def load_model(path: str):
     return model
 
 
-# load model on startup
-try:
-    model = load_model(MODEL_PATH)
-except Exception as e:
-    # keep model as None and raise on call
-    model = None
-    app.state.load_error = str(e)
+def download_model_if_needed(target_path: str):
+    """If model file is missing and MODEL_DOWNLOAD_URL provided, download it.
+    Supports HTTP(S) direct downloads or s3://bucket/key with boto3 (if installed).
+    """
+    p = Path(target_path)
+    if p.exists():
+        return True
+    url = MODEL_DOWNLOAD_URL
+    if not url:
+        return False
+    print(f"Model file missing at {target_path}. Attempting download from: {url}")
+    parsed = urlparse(url)
+    try:
+        if parsed.scheme in ('http', 'https'):
+            # stream download
+            resp = requests.get(url, stream=True, timeout=60)
+            resp.raise_for_status()
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with open(p, 'wb') as f:
+                shutil.copyfileobj(resp.raw, f)
+            print('Downloaded model via HTTP(S)')
+            return True
+        elif parsed.scheme == 's3':
+            if boto3 is None:
+                print('boto3 not installed; cannot download from s3:// URL')
+                return False
+            # parse s3://bucket/key
+            bucket = parsed.netloc
+            key = parsed.path.lstrip('/')
+            s3 = boto3.client('s3')
+            p.parent.mkdir(parents=True, exist_ok=True)
+            s3.download_file(bucket, key, str(p))
+            print('Downloaded model from S3')
+            return True
+        else:
+            print('Unsupported model download scheme:', parsed.scheme)
+            return False
+    except Exception as e:
+        print('Failed to download model:', e)
+        return False
+
+# lazy model (will be loaded on first inference to make startup robust)
+model = None
+app.state.load_error = None
+
+def ensure_model_loaded():
+    """Load the model on-demand. Sets app.state.load_error on failure and returns the model or raises HTTPException."""
+    global model
+    if model is not None:
+        return model
+    try:
+        # If model file missing, try to download it from MODEL_DOWNLOAD_URL / MODEL_S3_URL
+        if not Path(MODEL_PATH).exists():
+            ok = download_model_if_needed(MODEL_PATH)
+            if not ok:
+                raise FileNotFoundError(f"Model not found at: {MODEL_PATH} and no download succeeded (MODEL_DOWNLOAD_URL={MODEL_DOWNLOAD_URL})")
+        model = load_model(MODEL_PATH)
+        app.state.load_error = None
+        return model
+    except Exception as e:
+        app.state.load_error = str(e)
+        raise HTTPException(status_code=500, detail=f"Model not loaded: {e}")
 
 
 preprocess = transforms.Compose([
@@ -67,9 +141,8 @@ def image_from_b64(b64: str) -> Image.Image:
 @app.post('/infer')
 async def infer(req: InferRequest):
     """Accepts JSON with `image_b64` and returns { label, confidence }"""
-    if model is None:
-        raise HTTPException(status_code=500, detail=f"Model not loaded: {getattr(app.state, 'load_error', 'unknown')}")
-
+    # ensure model is available (lazy-load if necessary)
+    ensure_model_loaded()
     img = image_from_b64(req.image_b64)
     input_tensor = preprocess(img).unsqueeze(0).to(DEVICE)
 
@@ -87,8 +160,8 @@ async def infer(req: InferRequest):
 @app.post('/infer-file')
 async def infer_file(file: UploadFile = File(...)):
     """Accepts multipart/form-data file upload (image)"""
-    if model is None:
-        raise HTTPException(status_code=500, detail=f"Model not loaded: {getattr(app.state, 'load_error', 'unknown')}")
+    # ensure model is available (lazy-load if necessary)
+    ensure_model_loaded()
     contents = await file.read()
     try:
         img = Image.open(BytesIO(contents)).convert('RGB')
@@ -110,3 +183,15 @@ async def infer_file(file: UploadFile = File(...)):
 async def health():
     ok = model is not None
     return {"ok": ok, "model_path": MODEL_PATH if ok else None, "error": getattr(app.state, 'load_error', None)}
+
+
+# Helpful developer GET routes to avoid confusing 404s in the browser console.
+@app.get('/')
+async def root():
+    return {"service": "E-waste model service", "routes": ["POST /infer (json image_b64)", "POST /infer-file (multipart)", "GET /health"]}
+
+
+@app.get('/infer')
+async def infer_get():
+    # Informative response for accidental GET requests from the browser.
+    raise HTTPException(status_code=405, detail="POST /infer with JSON { image_b64 } is required; use POST not GET")
