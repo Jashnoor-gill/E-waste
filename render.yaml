@@ -7,7 +7,7 @@ services:
       pip install --upgrade pip setuptools wheel && 
       pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu" && 
       pip install --no-cache-dir -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+  startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
 # Render service template for two services: backend (Node) and model_service (Docker/Python).
 # Replace <owner> and <repo> or let Render connect to your GitHub repo when adding services.
 # This is a template — copy to the Render dashboard or adjust to your org/project settings.
