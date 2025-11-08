@@ -1,5 +1,7 @@
 fastapi
 uvicorn[standard]
-torch
-torchvision
 Pillow
+requests
+boto3
+python-multipart
+gunicorn
