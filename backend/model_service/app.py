@@ -33,7 +33,7 @@ class InferRequest(BaseModel):
     image_b64: str
 
 
-MODEL_PATH = os.environ.get('MODEL_PATH') or str(Path(__file__).resolve().parents[2] / 'Final_DP' / 'Model' / 'resnet50_ewaste_traced.pt')
+MODEL_PATH = os.environ.get('MODEL_PATH') or str(Path(__file__).resolve().parents[2] / 'Model' / 'Model' / 'resnet50_ewaste_traced.pt')
 MODEL_DOWNLOAD_URL = os.environ.get('MODEL_DOWNLOAD_URL') or os.environ.get('MODEL_S3_URL')
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
