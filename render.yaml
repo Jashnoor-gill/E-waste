@@ -1,23 +1,12 @@
 services:
-  - type: web
-    name: model-service
-    env: python
-    root: backend/model_service
-    buildCommand: >-
-      ../.venv/bin/python -m pip install --upgrade pip setuptools wheel && 
-      ../.venv/bin/python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu" && 
-      ../.venv/bin/python -m pip install --no-cache-dir -r requirements.txt
-  startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
-# Render service template for two services: backend (Node) and model_service (Docker/Python).
-# Replace <owner> and <repo> or let Render connect to your GitHub repo when adding services.
-# This is a template — copy to the Render dashboard or adjust to your org/project settings.
-
-services:
+  # ================================
+  # BACKEND (Node.js)
+  # ================================
   - type: web
     name: ewaste-backend
     env: node
     plan: starter
-    repo: https://github.com/<owner>/<repo>
+    repo: https://github.com/Jashnoor-gill/E-waste
     root: backend
     buildCommand: "npm install"
     startCommand: "node index.js"
@@ -26,18 +15,21 @@ services:
       - key: ADMIN_TOKEN
       - key: DEVICE_TOKENS
 
+  # ================================
+  # MODEL SERVICE (Python)
+  # ================================
   - type: web
-    name: ewaste-model-service
-    env: docker
+    name: model-service
+    env: python
     plan: standard
-    repo: https://github.com/<owner>/<repo>
+    repo: https://github.com/Jashnoor-gill/E-waste
     root: backend/model_service
-    dockerfilePath: backend/model_service/Dockerfile
+    buildCommand: |
+      python3 -m pip install --upgrade pip setuptools wheel
+      python3 -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu"
+      python3 -m pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
     envVars:
       - key: MODEL_PATH
       - key: PORT
 
-# Notes:
-# - On Render, add two services and set the repository and branch. Add required env vars in the dashboard (ADMIN_TOKEN, DEVICE_TOKENS, MODEL_PATH, etc).
-# - The model file is tracked with Git LFS; ensure Render can fetch LFS objects from your repo (it generally does when connected to GitHub).
-# - For the model service we use a Docker service (to ensure PyTorch wheels can be installed reproducibly).
