@@ -28,7 +28,7 @@ def main():
         out = Path(args.out)
     else:
         ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        out = Path(__file__).resolve().parent.parent / 'Final_DP' / 'Final_DP' / 'Photos' / f'captured_image_{ts}.jpg'
+    out = Path(__file__).resolve().parent.parent / 'Model' / 'Model' / 'Photos' / f'captured_image_{ts}.jpg'
     path = capture(out)
     print(path)
 

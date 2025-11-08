@@ -3,7 +3,7 @@
 Upload a model file to S3 and print the public URL (or the object path).
 
 Usage:
-  python scripts/upload_model_s3.py --bucket my-bucket --key models/resnet50_ewaste_traced.pt --file Final_DP/Model/resnet50_ewaste_traced.pt
+    python scripts/upload_model_s3.py --bucket my-bucket --key models/resnet50_ewaste_traced.pt --file Model/Model/resnet50_ewaste_traced.pt
 
 Requires AWS credentials in environment (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or an IAM role.
 """

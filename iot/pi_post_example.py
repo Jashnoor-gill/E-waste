@@ -2,7 +2,7 @@
 then base64-encode it and POST to the backend /api/iot/run-model endpoint.
 
 Usage:
-  - Place this script in your project on the Pi where Final_DP files exist.
+    - Place this script in your project on the Pi. If you packaged capture scripts, place them in `Model/Scripts` or adapt the path.
   - Install 'requests' on the Pi: pip3 install requests
   - Run: python3 iot/pi_post_example.py --backend https://your-backend.example.com --reply-socket-id <socketId>
 """
@@ -14,11 +14,15 @@ from pathlib import Path
 
 
 def capture_image():
-    # Try to import capture from the Final_DP scripts. Adjust path if you placed the folder elsewhere.
+    # Try to import capture from the project's Model scripts. Adjust path if you placed the folder elsewhere.
     try:
         # When running from project root, the package path may resolve as below
         sys.path.append(str(Path(__file__).resolve().parent.parent))
-        from Final_DP.Final_DP.Scripts.Capture_Image import capture
+        # prefer Model package layout
+        try:
+            from Model.Scripts.Capture_Image import capture
+        except Exception:
+            from Final_DP.Final_DP.Scripts.Capture_Image import capture
         img_path = capture()
         return img_path
     except Exception as e:

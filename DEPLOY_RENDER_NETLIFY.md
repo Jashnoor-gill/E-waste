@@ -3,7 +3,7 @@
 This file summarizes the minimal steps to deploy the project using Netlify (frontend) and Render (backend + model service).
 
 1) Push your repository to GitHub
-  - Ensure your repo contains the model files tracked with Git LFS (they are in `Final_DP/Model`).
+  - Ensure your repo contains the model files tracked with Git LFS (they are in `Model/Model`) or host them externally and set MODEL_DOWNLOAD_URL.
 
 2) Frontend → Netlify
   - In Netlify, create a new site from Git and connect your repo/branch.
@@ -18,7 +18,7 @@ This file summarizes the minimal steps to deploy the project using Netlify (fron
       - `ADMIN_TOKEN` = a secret string for admin APIs
       - `DEVICE_TOKENS` = comma-separated device tokens (or use admin APIs to add tokens)
     - Service B: Docker web service for model (use `backend/model_service/Dockerfile`)
-      - Set env var `MODEL_PATH` if you stored the model someplace other than the default `Final_DP/Model/resnet50_ewaste_traced.pt`.
+    - Set env var `MODEL_PATH` if you stored the model someplace other than the default `Model/Model/resnet50_ewaste_traced.pt`.
   - Ensure Render pulls Git LFS objects (Render supports LFS when connected to GitHub).
 
 4) Test the live site

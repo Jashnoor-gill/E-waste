@@ -18,8 +18,8 @@ git lfs install
 2) Track the model files and commit `.gitattributes`
 
 ```powershell
-git lfs track "Final_DP/Final_DP/Model/*.pt"
-git lfs track "Final_DP/Final_DP/Model/*.pth"
+git lfs track "Model/Model/*.pt"
+git lfs track "Model/Model/*.pth"
 git add .gitattributes
 git commit -m "Track model binaries with Git LFS"
 ```
@@ -29,7 +29,7 @@ git commit -m "Track model binaries with Git LFS"
 Only run this if you already committed large binaries and want them migrated into LFS. This rewrites history and requires a force-push.
 
 ```powershell
-git lfs migrate import --include="Final_DP/Final_DP/Model/**"
+git lfs migrate import --include="Model/Model/**"
 git push origin --force
 ```
 
