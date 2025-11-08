@@ -5,6 +5,6 @@ services:
     root: .
     buildCommand: >-
       /opt/render/project/src/.venv/bin/python3 -m pip install --upgrade pip setuptools wheel && 
-  /opt/render/project/src/.venv/bin/python3 -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.5.1+cpu" "torchvision==0.21.0+cpu" && 
+  /opt/render/project/src/.venv/bin/python3 -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.6.0+cpu" "torchvision==0.21.0+cpu" && 
       /opt/render/project/src/.venv/bin/python3 -m pip install --no-cache-dir -r requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
