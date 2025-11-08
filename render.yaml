@@ -8,8 +8,8 @@ services:
     plan: starter
     repo: https://github.com/Jashnoor-gill/E-waste
     root: backend
-    buildCommand: "npm install"
-    startCommand: "node index.js"
+    buildCommand: npm install
+    startCommand: node index.js
     envVars:
       - key: MODEL_SERVICE_URL
       - key: ADMIN_TOKEN
@@ -24,9 +24,10 @@ services:
     plan: standard
     repo: https://github.com/Jashnoor-gill/E-waste
     root: backend/model_service
-    buildCommand: |
-      python -m pip install --upgrade pip setuptools wheel
-      python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu"
+    buildCommand: >
+      python -m pip install --upgrade pip setuptools wheel &&
+      python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu
+      "torch==2.5.1+cpu" "torchvision==0.20.1+cpu" &&
       python -m pip install --no-cache-dir -r requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
     envVars:
