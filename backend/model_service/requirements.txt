@@ -1,3 +1,9 @@
+## NOTE: PyTorch and torchvision are intentionally NOT listed here.
+## The Render build command installs specific CPU wheels for
+## torch/torchvision (see root `render.yaml`) to ensure the
+## correct manylinux wheels are used. Placing torch/torchvision
+## pins in this file can cause dependency conflicts during install.
+
 fastapi
 uvicorn[standard]
 Pillow
