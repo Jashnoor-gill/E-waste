@@ -3,8 +3,8 @@ services:
     name: model-service
     env: python
     root: .
-    buildCommand: >
-      python -m pip install --upgrade pip setuptools wheel && 
-      python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.5.1+cpu" "torchvision==0.20.0+cpu" && 
-      python -m pip install --no-cache-dir -r requirements.txt
+    buildCommand: >-
+      /opt/render/project/src/.venv/bin/python -m pip install --upgrade pip setuptools wheel && 
+      /opt/render/project/src/.venv/bin/python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu" && 
+      /opt/render/project/src/.venv/bin/python -m pip install --no-cache-dir -r requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker app:app --bind 0.0.0.0:$PORT --workers 1
