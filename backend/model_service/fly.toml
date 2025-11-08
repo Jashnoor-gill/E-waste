@@ -1,0 +1,24 @@
+[app]
+  # Change this to your Fly app name
+  name = "ewaste-model"
+  primary_region = "iad"
+
+[build]
+  builder = "dockerfile"
+
+[env]
+  # MODEL_DOWNLOAD_URL or MODEL_S3_URL should be set via fly secrets
+  # MODEL_DOWNLOAD_URL = "https://.../resnet50_ewaste_traced.pt"
+
+[services]
+  [[services]]
+    internal_port = 8001
+    protocol = "tcp"
+    processes = ["app"]
+    [services.concurrency]
+      type = "connections"
+      hard_limit = 200
+      soft_limit = 100
+    [[services.ports]]
+      handlers = ["http"]
+      port = 80

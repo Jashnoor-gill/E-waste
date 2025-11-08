@@ -1,0 +1,47 @@
+name: Deploy to Fly
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install flyctl
+        uses: superfly/setup-flyctl@v1
+
+      - name: Configure Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          echo "$FLY_API_TOKEN" | flyctl auth token
+
+      - name: Set backend secrets
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          DEVICE_TOKENS: ${{ secrets.DEVICE_TOKENS }}
+          MODEL_SERVICE_URL: ${{ secrets.MODEL_SERVICE_URL }}
+        run: |
+          flyctl secrets set --app ewaste-backend ADMIN_TOKEN="$ADMIN_TOKEN" DEVICE_TOKENS="$DEVICE_TOKENS" MODEL_SERVICE_URL="$MODEL_SERVICE_URL"
+
+      - name: Deploy backend
+        run: |
+          cd backend
+          flyctl deploy --app ewaste-backend --config fly.toml --remote-only
+
+      - name: Set model-service secrets
+        env:
+          MODEL_DOWNLOAD_URL: ${{ secrets.MODEL_DOWNLOAD_URL }}
+        run: |
+          flyctl secrets set --app ewaste-model MODEL_DOWNLOAD_URL="$MODEL_DOWNLOAD_URL"
+
+      - name: Deploy model service
+        run: |
+          cd backend/model_service
+          flyctl deploy --app ewaste-model --config fly.toml --remote-only

@@ -1,0 +1,27 @@
+[app]
+  # Change this to your Fly app name
+  name = "ewaste-backend"
+  # Primary region; change as needed (e.g., "iad", "ams", "lhr")
+  primary_region = "iad"
+
+[build]
+  builder = "dockerfile"
+
+[env]
+  # Example env var placeholders (set actual values with `fly secrets set`)
+  # MODEL_SERVICE_URL = "https://ewaste-model.internal/onrender/infer"
+  # ADMIN_TOKEN = "<set-via-fly-secrets>"
+  # DEVICE_TOKENS = "token1,token2"
+
+[services]
+  [[services]]
+    internal_port = 5000
+    protocol = "tcp"
+    processes = ["app"]
+    [services.concurrency]
+      type = "connections"
+      hard_limit = 1000
+      soft_limit = 500
+    [[services.ports]]
+      handlers = ["http"]
+      port = 80
