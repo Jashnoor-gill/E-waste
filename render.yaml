@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: model-service
+    env: python
+    root: backend/model_service
+    buildCommand: >-
+      pip install --upgrade pip setuptools wheel && 
+      pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.2.0+cpu" "torchvision==0.17.0+cpu" && 
+      pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+# Render service template for two services: backend (Node) and model_service (Docker/Python).
+# Replace <owner> and <repo> or let Render connect to your GitHub repo when adding services.
+# This is a template — copy to the Render dashboard or adjust to your org/project settings.
+
+services:
+  - type: web
+    name: ewaste-backend
+    env: node
+    plan: starter
+    repo: https://github.com/<owner>/<repo>
+    root: backend
+    buildCommand: "npm install"
+    startCommand: "node index.js"
+    envVars:
+      - key: MODEL_SERVICE_URL
+      - key: ADMIN_TOKEN
+      - key: DEVICE_TOKENS
+
+  - type: web
+    name: ewaste-model-service
+    env: docker
+    plan: standard
+    repo: https://github.com/<owner>/<repo>
+    root: backend/model_service
+    dockerfilePath: backend/model_service/Dockerfile
+    envVars:
+      - key: MODEL_PATH
+      - key: PORT
+
+# Notes:
+# - On Render, add two services and set the repository and branch. Add required env vars in the dashboard (ADMIN_TOKEN, DEVICE_TOKENS, MODEL_PATH, etc).
+# - The model file is tracked with Git LFS; ensure Render can fetch LFS objects from your repo (it generally does when connected to GitHub).
+# - For the model service we use a Docker service (to ensure PyTorch wheels can be installed reproducibly).
