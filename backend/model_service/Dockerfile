@@ -16,7 +16,7 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install PyTorch CPU wheels (explicit index for CPU build)
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.0+cpu torchvision==0.17.0+cpu
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.5.1+cpu torchvision==0.21.0+cpu
 
 COPY . /app
 
