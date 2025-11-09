@@ -52,6 +52,8 @@ function normalizeModelServiceUrl(raw) {
 }
 const RAW_MODEL_SERVICE = process.env.MODEL_SERVICE_URL || null;
 const MODEL_SERVICE_NORMALIZED = normalizeModelServiceUrl(RAW_MODEL_SERVICE);
+// store last model service health check result on app for debug endpoint
+app.set('modelServiceHealth', null);
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('✅ MongoDB connected successfully'))
@@ -182,10 +184,21 @@ server.listen(PORT, () => {
         fetchFn = mod.default;
       }
       const res = await fetchFn(healthUrl, { method: 'GET', timeout: 5000 });
-      try { const j = await res.json(); console.log('Model service health:', j); }
-      catch (e) { console.log('Model service health non-JSON response:', await res.text().catch(()=>'<unreadable>')); }
+      try { const j = await res.json(); console.log('Model service health:', j); app.set('modelServiceHealth', { ok: true, payload: j, ts: Date.now() }); }
+      catch (e) { const txt = await res.text().catch(()=>'<unreadable>'); console.log('Model service health non-JSON response:', txt); app.set('modelServiceHealth', { ok: false, payload: txt, ts: Date.now() }); }
     } catch (err) {
       console.warn('Model service health check failed:', String(err).slice(0,200));
+      app.set('modelServiceHealth', { ok: false, error: String(err), ts: Date.now() });
     }
   })();
+});
+
+// Debug endpoint: return normalized model service URL and last health-check result (no secrets)
+app.get('/debug/model-target', (req, res) => {
+  try {
+    const info = { model_service_normalized: MODEL_SERVICE_NORMALIZED || null, health: app.get('modelServiceHealth') || null };
+    return res.json(info);
+  } catch (e) {
+    return res.status(500).json({ error: 'failed to read model target info' });
+  }
 });
