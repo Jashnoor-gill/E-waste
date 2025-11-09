@@ -29,9 +29,28 @@ function setupUi() {
   if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
   if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
   if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+  // wire prominent test button if present
+  const testBtn = document.getElementById('testCameraBtn');
+  if (testBtn) testBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      // Ensure camera started, then do one-click capture
+      const v = document.getElementById(VIDEO_ID);
+      if (!v || !v.srcObject) {
+        await startWebcam();
+        // small delay for camera warmup
+        await new Promise(r => setTimeout(r, 300));
+      }
+      await oneClickCapture();
+    } catch (err) {
+      console.error('Test camera failed', err);
+      alert('Test camera failed: ' + (err.message || err));
+    }
+  });
 
   socket.on('connect', () => {
     console.log('IoT socket connected', socket.id);
+    updateStatus();
   });
 
   socket.on('iot-photo', (payload) => {
@@ -48,6 +67,7 @@ function setupUi() {
     console.log('Received iot-model-result', payload);
     showModelLoading(false);
     renderModelResult(payload);
+    updateStatus();
   });
 }
 
@@ -101,10 +121,7 @@ async function captureFromWebcam() {
 
   try {
   const body = { image_b64: b64, replySocketId: socket.id };
-    // if frontend mock mode is enabled, tell backend to return a canned result instead of calling PyTorch
-    if (typeof getMockEnabled === 'function' && getMockEnabled()) {
-      body.mock = true;
-    }
+    // mock removed; always call real backend
     // POST to same origin backend when available (local dev), otherwise fall back to DEFAULT_BACKEND
     const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -146,8 +163,7 @@ async function oneClickCapture() {
     const b64 = dataUrl.split(',')[1];
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
 
-    const body = { image_b64: b64, replySocketId: socket.id };
-    if (typeof getMockEnabled === 'function' && getMockEnabled()) body.mock = true;
+  const body = { image_b64: b64, replySocketId: socket.id };
     const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
@@ -234,17 +250,48 @@ function showModelLoading(show) {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupUi);
 else setupUi();
 
-// Auto-start camera when visiting dashboard.html with ?autostart=1
+// Auto-start webcam when on dashboard page to make testing easy for site users.
 try {
-  const params = new URLSearchParams(window.location.search || '');
-  if (params.get('autostart') === '1') {
-    // Delay slightly to allow DOM and permissions prompt to settle
+  const path = (window.location && window.location.pathname) ? window.location.pathname : '';
+  const isDashboard = path.endsWith('dashboard.html') || path === '/' || path.endsWith('/');
+  // If on dashboard page, attempt to start webcam (will prompt user for permission).
+  if (isDashboard) {
     setTimeout(() => {
       startWebcam().catch(err => console.warn('Auto-start webcam failed', err));
     }, 250);
   }
-} catch (e) {
-  // ignore
+} catch (e) { /* ignore */ }
+
+// Status indicator: updates socket and backend health in the dashboard.
+function setStatus(text, color) {
+  try {
+    const el = document.getElementById('iotStatus');
+    if (!el) return;
+    el.textContent = 'Status: ' + text;
+    if (color) el.style.color = color;
+  } catch (e) { /* ignore */ }
 }
+
+async function checkBackend() {
+  try {
+    const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/bins`, { method: 'GET', cache: 'no-store' });
+    if (res.ok) return true;
+  } catch (e) { /* ignore */ }
+  return false;
+}
+
+async function updateStatus() {
+  const socketOk = !!(window.iotSocket && window.iotSocket.connected);
+  const backendOk = await checkBackend();
+  const parts = [];
+  if (socketOk) parts.push('Socket: connected'); else parts.push('Socket: disconnected');
+  if (backendOk) parts.push('Backend: OK'); else parts.push('Backend: unreachable');
+  const color = (socketOk && backendOk) ? '#1a7f37' : '#c62828';
+  setStatus(parts.join(' • '), color);
+}
+
+// keep status current
+setInterval(updateStatus, 8000);
+updateStatus();
 
 export { requestCapture, requestRunModel, socket };
