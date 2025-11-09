@@ -29,6 +29,29 @@ app.add_middleware(
 )
 
 
+# Attempt to download and load the model at startup so the download appears in deploy logs
+@app.on_event('startup')
+async def startup_load_model():
+    try:
+        print('Startup: checking model file and attempting download/load if needed...')
+        # download_model_if_needed will return True if download succeeded or file exists
+        ok = download_model_if_needed(MODEL_PATH)
+        if ok:
+            try:
+                # load model to verify it loads correctly
+                _ = load_model(MODEL_PATH)
+                app.state.load_error = None
+                print(f'Model loaded successfully from {MODEL_PATH}')
+            except Exception as e:
+                app.state.load_error = str(e)
+                print('Model load failed at startup:', e)
+        else:
+            print(f'Model not present and download did not run or failed (MODEL_DOWNLOAD_URL={MODEL_DOWNLOAD_URL})')
+    except Exception as e:
+        app.state.load_error = str(e)
+        print('Startup model load encountered an error:', e)
+
+
 class InferRequest(BaseModel):
     image_b64: str
 
