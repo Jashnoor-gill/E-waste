@@ -234,4 +234,17 @@ function showModelLoading(show) {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupUi);
 else setupUi();
 
+// Auto-start camera when visiting dashboard.html with ?autostart=1
+try {
+  const params = new URLSearchParams(window.location.search || '');
+  if (params.get('autostart') === '1') {
+    // Delay slightly to allow DOM and permissions prompt to settle
+    setTimeout(() => {
+      startWebcam().catch(err => console.warn('Auto-start webcam failed', err));
+    }, 250);
+  }
+} catch (e) {
+  // ignore
+}
+
 export { requestCapture, requestRunModel, socket };
