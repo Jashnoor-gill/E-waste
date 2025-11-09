@@ -6,6 +6,12 @@
   command = "node ../scripts/generate_frontend_config.js"
   publish = "."
 
+[build.environment]
+# The generator script (scripts/generate_frontend_config.js) reads BACKEND_URL
+# at build time and writes it into `frontend/config.js`. Set your Render backend
+# URL here so deployed frontend points to the correct backend.
+BACKEND_URL = "https://e-waste-backend-3qxc.onrender.com"
+
 [dev]
   # For local dev (netlify dev) run the generator from the repo root then serve
   # the frontend directory (base). When using `base = "frontend"` serve `.`
