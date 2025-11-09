@@ -648,9 +648,17 @@ async function renderAdminDashboard() {
 }
 
 // Tab handlers with preventDefault to avoid anchor navigation
-document.getElementById('binUserTab').addEventListener('click', (e) => { e.preventDefault(); renderBinUserDashboard(); localStorage.setItem('lastDashboardPanel','bin-user'); });
-document.getElementById('collectorTab').addEventListener('click', (e) => { e.preventDefault(); renderCollectorDashboard(); localStorage.setItem('lastDashboardPanel','collector'); });
-document.getElementById('adminTab').addEventListener('click', (e) => { e.preventDefault(); renderAdminDashboard(); localStorage.setItem('lastDashboardPanel','admin'); });
+// Guard each lookup because some pages (e.g. bin-user.html) are separate
+const _get = (id) => document.getElementById(id);
+const _bind = (id, fn, storageKey) => {
+  const el = _get(id);
+  if (!el) return;
+  el.addEventListener('click', (e) => { e.preventDefault(); fn(); if (storageKey) localStorage.setItem('lastDashboardPanel', storageKey); });
+};
+
+_bind('binUserTab', renderBinUserDashboard, 'bin-user');
+_bind('collectorTab', renderCollectorDashboard, 'collector');
+_bind('adminTab', renderAdminDashboard, 'admin');
 
 // Export the main panel renderers so separate pages can call them.
 export { renderBinUserDashboard, renderCollectorDashboard, renderAdminDashboard };
