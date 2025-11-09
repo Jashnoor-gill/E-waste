@@ -56,26 +56,8 @@
     </ul>
   </div>
   <main id="dashboardContent" class="main-content">
-    <!-- Dashboard content will be loaded here -->
-    <section class="card" style="margin-bottom:1rem;">
-      <h3>IoT Camera / Model (Test)</h3>
-  <div id="iotStatus" style="margin-bottom:0.5rem; font-weight:600; color:#333">Status: connecting...</div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-    <button id="iotCaptureBtn" class="btn">Capture Photo (Pi)</button>
-    <button id="iotRunModelBtn" class="btn">Run Model (Pi)</button>
-    <button id="webcamStartBtn" class="btn">Start Camera</button>
-  <button id="webcamCaptureBtn" class="btn">Capture from Camera</button>
-  <button id="webcamOneClickBtn" class="btn">One‑Click Capture</button>
-    <button id="webcamStopBtn" class="btn">Stop Camera</button>
-    <!-- Big prominent test button for normal users -->
-    <button id="testCameraBtn" class="btn" style="background:#1a73e8; color:#fff; padding:0.8rem 1.4rem; font-weight:700">Test Camera & Model</button>
-        <div id="iotModelResult" style="white-space:pre-wrap; font-family:monospace; background:#f4f6f8; padding:0.5rem; border-radius:8px; margin-left:8px; min-width:180px;">Result will appear here</div>
-      </div>
-      <div id="iotImageContainer" style="margin-top:0.75rem;"></div>
-      <div style="margin-top:0.75rem;">
-        <video id="webcamVideo" autoplay playsinline style="max-width:360px; border-radius:8px; display:none; background:#000"></video>
-      </div>
-    </section>
+    <!-- Dashboard content will be loaded here by JS (collector/admin panels) -->
+    <!-- Bin User and IoT test moved to a dedicated page: bin-user.html -->
   </main>
   <script src="sidebar.js"></script>
   <script type="module" src="notifications.js"></script>

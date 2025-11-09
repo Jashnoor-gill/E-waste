@@ -20,13 +20,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // and optionally auto-starts the camera via the `autostart=1` query param.
   try {
     const menu = document.querySelector('#sidebar .sidebar-menu');
-    if (menu && !document.querySelector('#sidebar .sidebar-menu a[href*="dashboard.html"]')) {
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="dashboard.html?autostart=1"><span class="icon">📊</span> Dashboard</a>`;
-      // Insert at top (after Home) for visibility
-      const first = menu.firstElementChild;
-      if (first) menu.insertBefore(li, first.nextSibling);
-      else menu.appendChild(li);
+    if (menu) {
+      // ensure Dashboard link
+      if (!document.querySelector('#sidebar .sidebar-menu a[href*="dashboard.html"]')) {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="dashboard.html"><span class="icon">📊</span> Dashboard</a>`;
+        const first = menu.firstElementChild;
+        if (first) menu.insertBefore(li, first.nextSibling);
+        else menu.appendChild(li);
+      }
+      // ensure Bin User link (separate page)
+      if (!document.querySelector('#sidebar .sidebar-menu a[href*="bin-user.html"]')) {
+        const li2 = document.createElement('li');
+        li2.innerHTML = `<a href="bin-user.html"><span class="icon">👤</span> Bin User</a>`;
+        // insert after Dashboard link
+        const dashboardLink = document.querySelector('#sidebar .sidebar-menu a[href*="dashboard.html"]');
+        if (dashboardLink && dashboardLink.parentElement) menu.insertBefore(li2, dashboardLink.parentElement.nextSibling);
+        else menu.appendChild(li2);
+      }
     }
   } catch (e) {
     // non-fatal

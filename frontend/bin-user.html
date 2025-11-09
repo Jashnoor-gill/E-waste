@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bin User | E-Waste</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hamburger-menu" id="hamburgerMenu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="https://img.icons8.com/fluency/48/000000/recycle-sign.png" alt="Logo" class="sidebar-logo" />
+      <span class="sidebar-title">E-Waste</span>
+    </div>
+    <ul class="sidebar-menu">
+      <li><a href="index.html"><span class="icon">🏠</span> Home</a></li>
+      <li><a href="bin-user.html"><span class="icon">👤</span> Bin User</a></li>
+      <li><a href="dashboard.html"><span class="icon">📊</span> Dashboard</a></li>
+      <li><a href="box-status.html"><span class="icon">📦</span> Box Status</a></li>
+      <li><a href="stats.html"><span class="icon">📊</span> Stats</a></li>
+      <li><a href="about.html"><span class="icon">📚</span> About</a></li>
+    </ul>
+  </div>
+
+  <main id="dashboardContent" class="main-content">
+    <!-- Bin User content will be rendered here by dashboard.js -->
+  </main>
+
+  <script src="sidebar.js"></script>
+  <script type="module" src="notifications.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script type="module">
+    import { renderBinUserDashboard } from './dashboard.js';
+    // render the Bin User dashboard
+    renderBinUserDashboard();
+  </script>
+  <script type="module" src="iot.js"></script>
+</body>
+</html>

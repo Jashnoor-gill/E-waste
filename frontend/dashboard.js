@@ -652,18 +652,5 @@ document.getElementById('binUserTab').addEventListener('click', (e) => { e.preve
 document.getElementById('collectorTab').addEventListener('click', (e) => { e.preventDefault(); renderCollectorDashboard(); localStorage.setItem('lastDashboardPanel','collector'); });
 document.getElementById('adminTab').addEventListener('click', (e) => { e.preventDefault(); renderAdminDashboard(); localStorage.setItem('lastDashboardPanel','admin'); });
 
-// On load: respect `panel` query param, otherwise restore last used panel, default to Bin User
-window.addEventListener('DOMContentLoaded', () => {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const panel = params.get('panel') || localStorage.getItem('lastDashboardPanel') || 'bin-user';
-    switch (panel) {
-      case 'collector': renderCollectorDashboard(); break;
-      case 'admin': renderAdminDashboard(); break;
-      default: renderBinUserDashboard();
-    }
-  } catch (e) {
-    // fallback
-    renderBinUserDashboard();
-  }
-});
+// Export the main panel renderers so separate pages can call them.
+export { renderBinUserDashboard, renderCollectorDashboard, renderAdminDashboard };
