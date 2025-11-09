@@ -648,9 +648,22 @@ async function renderAdminDashboard() {
 }
 
 // Tab handlers with preventDefault to avoid anchor navigation
-document.getElementById('binUserTab').addEventListener('click', (e) => { e.preventDefault(); renderBinUserDashboard(); });
-document.getElementById('collectorTab').addEventListener('click', (e) => { e.preventDefault(); renderCollectorDashboard(); });
-document.getElementById('adminTab').addEventListener('click', (e) => { e.preventDefault(); renderAdminDashboard(); });
+document.getElementById('binUserTab').addEventListener('click', (e) => { e.preventDefault(); renderBinUserDashboard(); localStorage.setItem('lastDashboardPanel','bin-user'); });
+document.getElementById('collectorTab').addEventListener('click', (e) => { e.preventDefault(); renderCollectorDashboard(); localStorage.setItem('lastDashboardPanel','collector'); });
+document.getElementById('adminTab').addEventListener('click', (e) => { e.preventDefault(); renderAdminDashboard(); localStorage.setItem('lastDashboardPanel','admin'); });
 
-// Default to Bin User on DOM ready
-window.addEventListener('DOMContentLoaded', () => { renderBinUserDashboard(); });
+// On load: respect `panel` query param, otherwise restore last used panel, default to Bin User
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const panel = params.get('panel') || localStorage.getItem('lastDashboardPanel') || 'bin-user';
+    switch (panel) {
+      case 'collector': renderCollectorDashboard(); break;
+      case 'admin': renderAdminDashboard(); break;
+      default: renderBinUserDashboard();
+    }
+  } catch (e) {
+    // fallback
+    renderBinUserDashboard();
+  }
+});

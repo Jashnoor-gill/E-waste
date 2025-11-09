@@ -74,6 +74,7 @@ function setupUi() {
 // Browser webcam helpers --------------------------------------------------
 let _webcamStream = null;
 const VIDEO_ID = 'webcamVideo';
+let lastCapturedB64 = null; // store last captured image for explicit run
 
 async function startWebcam() {
   try {
@@ -106,7 +107,8 @@ async function captureFromWebcam() {
   const v = document.getElementById(VIDEO_ID);
   const imgContainer = document.getElementById('iotImageContainer');
   if (!v || !v.srcObject) return alert('Camera not started');
-  showModelLoading(true);
+  // Capture frame and show it, but do not run the model automatically.
+  showModelLoading(false);
   // draw current frame to canvas
   const canvas = document.createElement('canvas');
   canvas.width = v.videoWidth || 1280;
@@ -116,27 +118,13 @@ async function captureFromWebcam() {
   // convert to JPEG base64
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   const b64 = dataUrl.split(',')[1];
-
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
-
+  // store captured image and enable Run Model button
+  lastCapturedB64 = b64;
   try {
-  const body = { image_b64: b64, replySocketId: socket.id };
-    // mock removed; always call real backend
-    // POST to same origin backend when available (local dev), otherwise fall back to DEFAULT_BACKEND
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
-    console.log('run-model (webcam) response', data);
-    // backend will forward result to socket; also HTTP response contains result when ready
-    if (data && data.result) {
-      renderModelResult(data.result);
-      showModelLoading(false);
-    }
-  } catch (err) {
-    console.error('webcam run-model failed', err);
-    alert('Run model failed: ' + (err.message || err));
-    showModelLoading(false);
-  }
+    const runBtn = document.getElementById('iotRunModelBtn');
+    if (runBtn) runBtn.disabled = false;
+  } catch (e) { /* ignore */ }
 }
 
 // One-click flow: start camera, capture one frame, send it, then stop camera.
@@ -223,10 +211,17 @@ async function requestCapture() {
 
 async function requestRunModel() {
   try {
-    const body = { replySocketId: socket.id };
     showModelLoading(true);
-  const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    let body = { replySocketId: socket.id };
+    // If there's a captured image from the webcam, send it explicitly.
+    if (lastCapturedB64) {
+      body = { image_b64: lastCapturedB64, replySocketId: socket.id };
+      // clear stored image after sending
+      lastCapturedB64 = null;
+      try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
+    }
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     console.log('run-model requested', data);
   } catch (err) {
@@ -250,12 +245,14 @@ function showModelLoading(show) {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupUi);
 else setupUi();
 
-// Auto-start webcam when on dashboard page to make testing easy for site users.
+// Auto-start webcam when requested via query param (e.g. dashboard.html?autostart=1).
 try {
   const path = (window.location && window.location.pathname) ? window.location.pathname : '';
   const isDashboard = path.endsWith('dashboard.html') || path === '/' || path.endsWith('/');
-  // If on dashboard page, attempt to start webcam (will prompt user for permission).
-  if (isDashboard) {
+  const params = new URLSearchParams(window.location.search);
+  const auto = params.get('autostart') === '1' || params.get('autostart') === 'true';
+  // Only auto-start if we're on the dashboard and `autostart=1` is present.
+  if (isDashboard && auto) {
     setTimeout(() => {
       startWebcam().catch(err => console.warn('Auto-start webcam failed', err));
     }, 250);
