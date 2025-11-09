@@ -1,8 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Bin from '../models/Bin.js';
-import { mockBins } from '../mockData.js';
-import { shouldUseMock } from '../utils/mockUtil.js';
 
 const router = express.Router();
 
@@ -10,11 +8,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const bins = await Bin.find();
-    const useMock = shouldUseMock(req, !bins || bins.length === 0 || mongoose.connection.readyState !== 1);
-    if (useMock) return res.json(mockBins);
     res.json(bins);
   } catch (err) {
-    return res.json(mockBins);
+    console.error('Error fetching bins', err);
+    return res.status(500).json({ error: 'failed_to_fetch_bins' });
   }
 });
 

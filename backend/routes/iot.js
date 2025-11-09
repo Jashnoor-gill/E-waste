@@ -43,19 +43,7 @@ router.post('/run-model', async (req, res) => {
   const MODEL_SERVICE_URL = process.env.MODEL_SERVICE_URL || 'http://localhost:8001/infer';
   const body = req.body || {};
 
-  // If caller explicitly requests a mocked/demo result, return a canned response and forward to socket
-  if (body.mock) {
-    const requestId = makeReqId();
-    const replySocketId = body.replySocketId;
-    const requestMap = req.app.get('requestMap');
-    if (replySocketId && requestMap) requestMap.set(requestId, { replySocketId, ts: Date.now() });
-
-    const mocked = { label: 'Mobile', confidence: 0.87, note: 'demo (mock) result' };
-    try {
-      if (replySocketId) io.to(replySocketId).emit('iot-model-result', { requestId, ...mocked, source: 'mock' });
-    } catch (e) { /* ignore socket errors */ }
-    return res.status(200).json({ requestId, result: mocked });
-  }
+  // Mock/demo responses removed — always run real model flow or forward to device
 
   // If image_b64 provided, call model service directly and return/forward result
   if (body.image_b64) {
