@@ -33,3 +33,4 @@ services:
     envVars:
       - key: MODEL_PATH
       - key: PORT
+      - key: MODEL_DOWNLOAD_URL
