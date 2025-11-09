@@ -40,7 +40,17 @@ router.post('/run-model', async (req, res) => {
   const devices = req.app.get('devices');
   if (!io || !devices) return res.status(500).json({ error: 'IoT not configured' });
   // If caller provided an image (base64) we'll run inference on the server-side model service
-  const MODEL_SERVICE_URL = process.env.MODEL_SERVICE_URL || 'http://localhost:8001/infer';
+  // Accept either a full infer URL or a base URL — normalize to a POST-able /infer endpoint.
+  let MODEL_SERVICE_URL = process.env.MODEL_SERVICE_URL || 'http://localhost:8001/infer';
+  try {
+    const s = String(MODEL_SERVICE_URL || '').trim();
+    if (!/\/infer($|\?|#|\/)/.test(s)) {
+      // treat as base and append /infer
+      MODEL_SERVICE_URL = s.replace(/\/$/, '') + '/infer';
+    } else {
+      MODEL_SERVICE_URL = s;
+    }
+  } catch (e) { /* leave as-is */ }
   const body = req.body || {};
 
   // Mock/demo responses removed — always run real model flow or forward to device
