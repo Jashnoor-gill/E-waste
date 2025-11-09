@@ -38,6 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dashboardLink && dashboardLink.parentElement) menu.insertBefore(li2, dashboardLink.parentElement.nextSibling);
         else menu.appendChild(li2);
       }
+      // Deduplicate Bin User links (keep first occurrence)
+      try {
+        const binAnchors = menu.querySelectorAll('a[href*="bin-user.html"]');
+        if (binAnchors && binAnchors.length > 1) {
+          for (let i = 1; i < binAnchors.length; i++) {
+            const li = binAnchors[i].closest('li');
+            if (li) li.remove(); else binAnchors[i].remove();
+          }
+        }
+      } catch (e) { /* non-fatal */ }
     }
   } catch (e) {
     // non-fatal

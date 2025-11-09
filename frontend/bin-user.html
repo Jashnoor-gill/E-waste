@@ -27,6 +27,30 @@
     </ul>
   </div>
 
+  <!-- IoT / Camera control panel (Bin User) -->
+  <section id="iotPanel" class="iot-panel" style="padding:1rem; max-width:1100px; margin:1rem auto">
+    <h2>📷 Test Camera & Model</h2>
+    <div class="iot-controls" style="margin-top:0.5rem">
+      <video id="webcamVideo" autoplay playsinline style="display:none; width:100%; max-width:640px; border-radius:8px; background:#000"></video>
+      <div style="display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap">
+        <button id="webcamStartBtn" class="btn">Start Camera</button>
+        <button id="webcamStopBtn" class="btn">Stop Camera</button>
+        <button id="webcamCaptureBtn" class="btn">Capture</button>
+        <button id="iotRunModelBtn" class="btn">Run Model</button>
+        <button id="webcamOneClickBtn" class="btn">One-click Capture & Run</button>
+        <button id="iotCaptureBtn" class="btn">Request Device Capture</button>
+        <button id="testCameraBtn" class="btn">Test Camera & Model</button>
+      </div>
+
+      <div style="display:flex; gap:1rem; margin-top:1rem; align-items:flex-start; flex-wrap:wrap">
+        <div id="iotImageContainer" style="flex:1; min-width:220px"></div>
+        <div id="iotModelResult" style="flex:1; min-width:220px"></div>
+      </div>
+
+      <div id="iotStatus" style="margin-top:0.5rem; color:#666">Status: Unknown</div>
+    </div>
+  </section>
+
   <main id="dashboardContent" class="main-content">
     <!-- Bin User content will be rendered here by dashboard.js -->
   </main>
