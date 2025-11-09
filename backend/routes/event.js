@@ -11,7 +11,8 @@ router.get('/', async (req, res) => {
     res.json(events);
   } catch (err) {
     console.error('Error fetching events', err);
-    return res.status(500).json({ error: 'failed_to_fetch_events' });
+    // Return empty events when DB is unavailable to avoid breaking frontend
+    return res.json([]);
   }
 });
 

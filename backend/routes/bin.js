@@ -11,7 +11,8 @@ router.get('/', async (req, res) => {
     res.json(bins);
   } catch (err) {
     console.error('Error fetching bins', err);
-    return res.status(500).json({ error: 'failed_to_fetch_bins' });
+    // Return an empty list when DB is unavailable so frontend can still function
+    return res.json([]);
   }
 });
 

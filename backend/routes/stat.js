@@ -11,7 +11,8 @@ router.get('/', async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error('Error fetching stats', err);
-    return res.status(500).json({ error: 'failed_to_fetch_stats' });
+    // Return empty stats object when DB is unavailable
+    return res.json({});
   }
 });
 
