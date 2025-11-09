@@ -11,6 +11,10 @@
 # at build time and writes it into `frontend/config.js`. Set your Render backend
 # URL here so deployed frontend points to the correct backend.
 BACKEND_URL = "https://e-waste-backend-3qxc.onrender.com"
+# Optional: provide multiple backends (comma-separated). The generator will
+# produce `window.BACKEND_URLS` (array) and `window.BACKEND_URL` (first entry).
+# Example value below contains both of your backend URLs.
+BACKEND_URLS = "https://e-waste-1-agt0.onrender.com/,https://e-waste-backend-3qxc.onrender.com/"
 
 [dev]
   # For local dev (netlify dev) run the generator from the repo root then serve
