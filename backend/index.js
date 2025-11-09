@@ -41,6 +41,18 @@ app.use(express.static(frontendDir));
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+// Normalize MODEL_SERVICE_URL for logging and quick health check (helps troubleshooting)
+function normalizeModelServiceUrl(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  try {
+    if (!/\/infer($|\?|#|\/)/.test(s)) return s.replace(/\/$/, '');
+    return s.replace(/\/$/, '');
+  } catch (e) { return s; }
+}
+const RAW_MODEL_SERVICE = process.env.MODEL_SERVICE_URL || null;
+const MODEL_SERVICE_NORMALIZED = normalizeModelServiceUrl(RAW_MODEL_SERVICE);
+
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('✅ MongoDB connected successfully'))
   .catch((err) => {
@@ -153,4 +165,27 @@ app.put('/api/bins/:id', async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  // Log model service URL info for easier debugging
+  try {
+    if (MODEL_SERVICE_NORMALIZED) console.log(`Model service (normalized): ${MODEL_SERVICE_NORMALIZED}`);
+    else console.log('MODEL_SERVICE_URL not set');
+  } catch (e) { /* ignore */ }
+
+  // Optionally probe model service health (best-effort). Uses global fetch if available.
+  (async () => {
+    if (!MODEL_SERVICE_NORMALIZED) return;
+    const healthUrl = MODEL_SERVICE_NORMALIZED.replace(/\/infer($|\/)/, '') + '/health';
+    try {
+      let fetchFn = (typeof fetch !== 'undefined') ? fetch : null;
+      if (!fetchFn) {
+        const mod = await import('node-fetch');
+        fetchFn = mod.default;
+      }
+      const res = await fetchFn(healthUrl, { method: 'GET', timeout: 5000 });
+      try { const j = await res.json(); console.log('Model service health:', j); }
+      catch (e) { console.log('Model service health non-JSON response:', await res.text().catch(()=>'<unreadable>')); }
+    } catch (err) {
+      console.warn('Model service health check failed:', String(err).slice(0,200));
+    }
+  })();
 });
