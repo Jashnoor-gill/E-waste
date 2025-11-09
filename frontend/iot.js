@@ -109,14 +109,18 @@ async function captureFromWebcam() {
   if (!v || !v.srcObject) return alert('Camera not started');
   // Capture frame and show it, but do not run the model automatically.
   showModelLoading(false);
-  // draw current frame to canvas
+  // draw current frame to canvas (resize to limit payload)
+  const MAX_WIDTH = 800;
+  const origW = v.videoWidth || 1280;
+  const origH = v.videoHeight || 720;
+  const scale = Math.min(1, MAX_WIDTH / origW);
   const canvas = document.createElement('canvas');
-  canvas.width = v.videoWidth || 1280;
-  canvas.height = v.videoHeight || 720;
+  canvas.width = Math.round(origW * scale);
+  canvas.height = Math.round(origH * scale);
   const ctx = canvas.getContext('2d');
   ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-  // convert to JPEG base64
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  // convert to JPEG base64 with reduced quality to avoid large payloads
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
   const b64 = dataUrl.split(',')[1];
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
   // store captured image and enable Run Model button
@@ -142,19 +146,33 @@ async function oneClickCapture() {
     }
 
     // draw frame
+    const MAX_WIDTH = 800;
+    const origW = v.videoWidth || 1280;
+    const origH = v.videoHeight || 720;
+    const scale = Math.min(1, MAX_WIDTH / origW);
     const canvas = document.createElement('canvas');
-    canvas.width = v.videoWidth || 1280;
-    canvas.height = v.videoHeight || 720;
+    canvas.width = Math.round(origW * scale);
+    canvas.height = Math.round(origH * scale);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
     const b64 = dataUrl.split(',')[1];
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
 
   const body = { image_b64: b64, replySocketId: socket.id };
     const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
+    // handle non-JSON error pages (e.g. 413) gracefully
+    if (!res.ok) {
+      const txt = await res.text().catch(() => `Status ${res.status}`);
+      throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
+    }
+    let data;
+    try { data = await res.json(); }
+    catch (e) {
+      const txt = await res.text().catch(() => 'Invalid JSON response');
+      throw new Error('Invalid JSON response: ' + txt.slice(0,200));
+    }
     if (data && data.result) renderModelResult(data.result);
     showModelLoading(false);
   } catch (err) {
@@ -200,7 +218,13 @@ async function requestCapture() {
     showCaptureLoading(true);
   const captureUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/capture`;
   const res = await fetch(captureUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
+    if (!res.ok) {
+      const txt = await res.text().catch(() => `Status ${res.status}`);
+      throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
+    }
+    let data;
+    try { data = await res.json(); }
+    catch (e) { const txt = await res.text().catch(()=> 'Invalid JSON'); throw new Error('Invalid JSON response: '+txt.slice(0,200)); }
     console.log('capture requested', data);
     // waiting for 'iot-photo' event
   } catch (err) {
@@ -222,7 +246,13 @@ async function requestRunModel() {
       try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
     }
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
+    if (!res.ok) {
+      const txt = await res.text().catch(() => `Status ${res.status}`);
+      throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
+    }
+    let data;
+    try { data = await res.json(); }
+    catch (e) { const txt = await res.text().catch(()=> 'Invalid JSON'); throw new Error('Invalid JSON response: '+txt.slice(0,200)); }
     console.log('run-model requested', data);
   } catch (err) {
     console.error('run model request failed', err);

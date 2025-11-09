@@ -177,6 +177,12 @@ async function renderBinUserDashboard() {
 function setupDepositModal(bins) {
   const depositModal = document.getElementById('depositModal');
   const openDepositModalBtn = document.getElementById('openDepositModal');
+
+  // Guard: if modal or open button are missing, skip wiring the modal to avoid runtime errors
+  if (!depositModal || !openDepositModalBtn) {
+    console.warn('Deposit modal or trigger not found; skipping modal setup');
+    return;
+  }
   
   let selectedBin = null;
   let selectedCategory = 'other';
