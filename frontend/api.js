@@ -1,19 +1,11 @@
 // Simple API utility for frontend (mobile/LAN friendly)
-// If served over LAN (http://<PC_IP>:<port>), use that host for API as well.
-const API_BASE = 'https://e-waste-backend-3qxc.onrender.com/api';
+// Prefer a runtime-configured backend (window.BACKEND_URL) when available.
+const API_BASE = (typeof window !== 'undefined' && window.BACKEND_URL)
+  ? `${window.BACKEND_URL.replace(/\/$/, '')}/api`
+  : 'https://e-waste-backend-3qxc.onrender.com/api';
 
-function isMockEnabled() {
-  if (typeof window === 'undefined') return false;
-  const stored = localStorage.getItem('USE_MOCK');
-  // Default to ON (show mock data) if not explicitly set
-  return stored === null ? true : stored === '1';
-}
-
-function withMock(url) {
-  const sep = url.includes('?') ? '&' : '?';
-  const flag = isMockEnabled() ? '1' : '0';
-  return `${url}${sep}mock=${flag}`;
-}
+// Mock mode removed: withMock and mock flags are no-ops. All requests go to real backend.
+function withMock(url) { return url; }
 
 export async function getBins() {
   const res = await fetch(withMock(`${API_BASE}/bins`));
@@ -124,14 +116,8 @@ export async function updateStats(data) {
   return res.json();
 }
 
-export function setMockEnabled(on) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('USE_MOCK', on ? '1' : '0');
-  }
-}
-
-export function getMockEnabled() {
-  return isMockEnabled();
-}
+// No-op mock API: keep API surface minimal for compatibility
+export function setMockEnabled(on) { /* no-op (mock removed) */ }
+export function getMockEnabled() { return false; }
 
 // Add more API calls as needed
