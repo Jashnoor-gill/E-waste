@@ -1,9 +1,15 @@
 [build]
-  command = "node scripts/generate_frontend_config.js"
-  publish = "frontend"
+  # Netlify will build from the `frontend` directory. When the base is
+  # `frontend` the build command must reference the script in the repo root
+  # (one level up) so use `../scripts/...` below. Publish the current base (.)
+  base = "frontend"
+  command = "node ../scripts/generate_frontend_config.js"
+  publish = "."
 
 [dev]
-  command = "node scripts/generate_frontend_config.js && npx http-server frontend -p 8888"
+  # For local dev (netlify dev) run the generator from the repo root then serve
+  # the frontend directory (base). When using `base = "frontend"` serve `.`
+  command = "node ../scripts/generate_frontend_config.js && npx http-server . -p 8888"
   port = 8888
 
 # You can also add redirect rules or headers here if needed.
