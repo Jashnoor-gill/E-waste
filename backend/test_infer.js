@@ -14,7 +14,7 @@ const backend = args[1] || 'http://localhost:3000';
 async function main() {
   const buf = fs.readFileSync(imgPath);
   const b64 = buf.toString('base64');
-  const resp = await fetch(backend + '/api/iot/run-model', {
+  const resp = await fetch(backend + '/backend/iot/run-model', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ image_b64: b64 })

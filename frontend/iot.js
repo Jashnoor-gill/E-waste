@@ -160,7 +160,7 @@ async function oneClickCapture() {
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
 
   const body = { image_b64: b64, replySocketId: socket.id };
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/backend/iot/run-model`;
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     // handle non-JSON error pages (e.g. 413) gracefully
     if (!res.ok) {
@@ -216,7 +216,7 @@ async function requestCapture() {
     const body = { replySocketId: socket.id };
     // show a simple loading state
     showCaptureLoading(true);
-  const captureUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/capture`;
+  const captureUrl = `${ORIGIN.replace(/\/$/, '')}/backend/iot/capture`;
   const res = await fetch(captureUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
@@ -236,7 +236,7 @@ async function requestCapture() {
 async function requestRunModel() {
   try {
     showModelLoading(true);
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+  const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/backend/iot/run-model`;
     let body = { replySocketId: socket.id };
     // If there's a captured image from the webcam, send it explicitly.
     if (lastCapturedB64) {
@@ -245,7 +245,7 @@ async function requestRunModel() {
       lastCapturedB64 = null;
       try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
     }
-    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
       throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);

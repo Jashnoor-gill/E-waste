@@ -46,7 +46,7 @@ npm run dev
 node backend/test_mock.js
 ```
 
-This posts a `mock:true` request to `POST /api/iot/run-model` and prints the response. The backend should also emit a `iot-model-result` event to the socket if `replySocketId` is provided.
+This posts a `mock:true` request to `POST /backend/iot/run-model` and prints the response. The backend should also emit a `iot-model-result` event to the socket if `replySocketId` is provided.
 
 ## Troubleshooting
 - If the Netlify deploy fails, check the Action logs and Netlify site deploy logs — missing `NETLIFY_SITE_ID` or wrong `NETLIFY_AUTH_TOKEN` are common causes.

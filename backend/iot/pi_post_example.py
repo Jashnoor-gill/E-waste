@@ -1,5 +1,5 @@
 """Simple Raspberry Pi example: capture a photo using the provided Capture_Image.capture()
-then base64-encode it and POST to the backend /api/iot/run-model endpoint.
+then base64-encode it and POST to the backend /backend/iot/run-model endpoint.
 
 Usage:
     - Place this script in your project on the Pi. If you packaged capture scripts, place them in `Model/Scripts` or adapt the path.
@@ -84,7 +84,7 @@ def post_image(backend_url, image_path, reply_socket_id=None):
     payload = {'image_b64': b64}
     if reply_socket_id:
         payload['replySocketId'] = reply_socket_id
-    url = backend_url.rstrip('/') + '/api/iot/run-model'
+    url = backend_url.rstrip('/') + '/backend/iot/run-model'
     print('Posting to', url, 'payload bytes', len(data))
     try:
         resp = requests.post(url, json=payload, timeout=60)
@@ -105,24 +105,22 @@ def main():
 
     img = capture_image()
     print('Captured:', img)
-    # If the CLI provided max-width/quality, patch prepare_image behaviour by passing via globals
-    # (kept simple to avoid refactoring signatures). Alternatively the helper could accept params.
-    # We'll call prepare_image here to ensure the requested resizing is used.
+    # Try to resize/compress and POST directly using the provided args.
     try:
         data = prepare_image(img, max_width=args.max_width, quality=args.quality)
-        # temporary write to a bytes object for post_image path
         b64 = base64.b64encode(data).decode('ascii')
         payload = {'image_b64': b64}
         if args.reply_socket_id:
-            payload['replySocketId'] = args.reply_socket_id
-        url = args.backend.rstrip('/') + '/api/iot/run-model'
+            payload['replySocketId'] = args.replySocket_id if False else args.reply_socket_id
+        url = args.backend.rstrip('/') + '/backend/iot/run-model'
         print('Posting to', url, 'payload bytes', len(data))
         resp = requests.post(url, json=payload, timeout=60)
         resp.raise_for_status()
         res = resp.json()
     except Exception:
-        # Fallback to the original post behaviour (will re-read file)
+        # Fallback to the original post behaviour (will re-read file and use prepare_image inside)
         res = post_image(args.backend, img, args.reply_socket_id)
+
     print('Server response:', res)
 
 
