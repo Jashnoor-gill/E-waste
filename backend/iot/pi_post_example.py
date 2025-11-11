@@ -1,5 +1,5 @@
 """Simple Raspberry Pi example: capture a photo using the provided Capture_Image.capture()
-then base64-encode it and POST to the backend /backend/iot/run-model endpoint.
+then base64-encode it and POST to the backend /api/iot/run-model endpoint.
 
 Usage:
     - Place this script in your project on the Pi. If you packaged capture scripts, place them in `Model/Scripts` or adapt the path.
@@ -84,7 +84,7 @@ def post_image(backend_url, image_path, reply_socket_id=None):
     payload = {'image_b64': b64}
     if reply_socket_id:
         payload['replySocketId'] = reply_socket_id
-    url = backend_url.rstrip('/') + '/backend/iot/run-model'
+    url = backend_url.rstrip('/') + '/api/iot/run-model'
     print('Posting to', url, 'payload bytes', len(data))
     try:
         resp = requests.post(url, json=payload, timeout=60)
@@ -111,8 +111,8 @@ def main():
         b64 = base64.b64encode(data).decode('ascii')
         payload = {'image_b64': b64}
         if args.reply_socket_id:
-            payload['replySocketId'] = args.replySocket_id if False else args.reply_socket_id
-        url = args.backend.rstrip('/') + '/backend/iot/run-model'
+            payload['replySocketId'] = args.reply_socket_id
+        url = args.backend.rstrip('/') + '/api/iot/run-model'
         print('Posting to', url, 'payload bytes', len(data))
         resp = requests.post(url, json=payload, timeout=60)
         resp.raise_for_status()
