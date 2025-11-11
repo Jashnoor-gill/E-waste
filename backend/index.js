@@ -70,6 +70,8 @@ app.use('/api/stats', statRoutes);
 app.use('/api/notify', notifyRoutes);
 import iotRoutes from './routes/iot.js';
 app.use('/api/iot', iotRoutes);
+import runModelRouter from './iot/run-model.js';
+app.use('/api/iot', runModelRouter);
 import deviceMgmt from './routes/device_mgmt.js';
 app.use('/api/device-mgmt', deviceMgmt);
 import modelUpload from './routes/model_upload.js';
