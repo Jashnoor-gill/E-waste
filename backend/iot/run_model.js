@@ -24,17 +24,20 @@ router.post('/run-model', async (req, res) => {
         const resp = await fetch(modelUrlFromEnv, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), timeout: 15000 });
         const txt = await resp.text();
         if (!resp.ok) {
-          return res.status(502).json({ error: 'Model service returned error', status: resp.status, body: txt.slice(0, 1000) });
-        }
-        try {
-          const j = JSON.parse(txt);
-          return res.json(j);
-        } catch (e) {
-          return res.status(502).json({ error: 'Model service returned non-JSON', raw: txt.slice(0, 1000) });
+          console.warn('Model service returned non-OK, falling back to simulation', resp.status, txt.slice(0,200));
+          // fall through to simulation below
+        } else {
+          try {
+            const j = JSON.parse(txt);
+            return res.json(j);
+          } catch (e) {
+            console.warn('Model service returned non-JSON, falling back to simulation', e.message);
+            // fall through to simulation below
+          }
         }
       } catch (err) {
-        console.error('Forward to MODEL_SERVICE_URL failed:', err);
-        return res.status(502).json({ error: 'Failed to forward to model service', details: String(err) });
+        console.error('Forward to MODEL_SERVICE_URL failed, falling back to simulation:', err);
+        // fall through to simulation below
       }
     }
 
