@@ -10,13 +10,17 @@ router.get('/run-model', (req, res) => {
 // POST /run-model: if MODEL_SERVICE_URL is set, forward the request there (proxy); otherwise simulate.
 router.post('/run-model', async (req, res) => {
   try {
-    const modelUrlFromEnv = (process.env.MODEL_SERVICE_URL || '').trim();
-    if (modelUrlFromEnv) {
+  // Prefer explicit env, but fall back to the known deployed model service if available.
+  // This helps when the backend hasn't been configured with MODEL_SERVICE_URL yet.
+  const FALLBACK_MODEL_SERVICE = 'https://e-waste-1-agt0.onrender.com/infer';
+  const modelUrlFromEnv = ((process.env.MODEL_SERVICE_URL || '').trim()) || FALLBACK_MODEL_SERVICE;
+  if (modelUrlFromEnv) {
       // if the provided URL doesn't look like it already contains /infer or similar, we won't modify it here.
       try {
         const mod = await import('node-fetch');
         const fetch = mod.default;
-        const body = (req && req.body && Object.keys(req.body).length) ? req.body : {};
+  const body = (req && req.body && Object.keys(req.body).length) ? req.body : {};
+  console.log('Forwarding /api/iot/run-model to model service at', modelUrlFromEnv);
         const resp = await fetch(modelUrlFromEnv, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), timeout: 15000 });
         const txt = await resp.text();
         if (!resp.ok) {
