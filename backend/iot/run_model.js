@@ -1,56 +1,21 @@
 import express from 'express';
-import { spawn } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+// Simulated model runner (no Python required). Returns a random label/confidence after a short delay.
 router.post('/run-model', async (req, res) => {
   try {
-    // Choose python executable depending on platform
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-    // run the companion Python script located next to this file
-    const scriptPath = path.join(__dirname, 'run_model.py');
+    // Simulate inference latency
+    await new Promise((resolve) => setTimeout(resolve, 1200));
 
-    const python = spawn(pythonCmd, [scriptPath], { cwd: __dirname });
+    const labels = ['phone', 'laptop', 'battery', 'accessory', 'unknown'];
+    const label = labels[Math.floor(Math.random() * labels.length)];
+    const confidence = parseFloat((Math.random() * (0.99 - 0.6) + 0.6).toFixed(2));
 
-    let resultData = '';
-    let stderr = '';
-
-    python.stdout.on('data', (data) => {
-      resultData += data.toString();
-    });
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-      console.error('Python error:', data.toString());
-    });
-
-    // Safety: kill long-running child after 60s
-    const killTimer = setTimeout(() => {
-      try { python.kill(); } catch (e) { /* ignore */ }
-    }, 60000);
-
-    python.on('close', (code) => {
-      clearTimeout(killTimer);
-      if (stderr && !resultData) {
-        console.error('Python process exited with stderr:', stderr);
-      }
-      try {
-        const result = resultData ? JSON.parse(resultData) : {};
-        return res.json(result);
-      } catch (err) {
-        console.error('JSON parse error:', err, 'raw output:', resultData);
-        return res.status(500).json({ error: 'Failed to parse Python output', details: err.message, raw: resultData });
-      }
-    });
-
+    return res.json({ label, confidence });
   } catch (error) {
-    console.error('Run-model error:', error);
-    res.status(500).json({ error: 'Model service call failed', details: String(error) });
+    console.error('Run-model simulation error:', error);
+    return res.status(500).json({ error: 'Model simulation failed', details: String(error) });
   }
 });
 
