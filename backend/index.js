@@ -204,3 +204,16 @@ app.get('/debug/model-target', (req, res) => {
     return res.status(500).json({ error: 'failed to read model target info' });
   }
 });
+
+// Debug: list registered IoT devices (name -> socketId). Read-only, no secrets returned.
+app.get('/debug/devices', (req, res) => {
+  try {
+    const devicesMap = app.get('devices');
+    if (!devicesMap) return res.json({ devices: [] });
+    const devices = [];
+    for (const [name, socketId] of devicesMap.entries()) devices.push({ name, socketId });
+    return res.json({ devices, count: devices.length });
+  } catch (e) {
+    return res.status(500).json({ error: 'failed to list devices' });
+  }
+});
