@@ -80,6 +80,11 @@ async function startWebcam() {
   try {
     const v = document.getElementById(VIDEO_ID);
     if (!v) return alert('No video element found on page');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const msg = 'Camera not available: your browser does not support getUserMedia or page is not served via HTTPS/localhost.';
+      console.error('startWebcam failed - getUserMedia unavailable');
+      return alert(msg + '\n\nTip: open this page over HTTPS or localhost and allow camera permission.');
+    }
     const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
     v.srcObject = stream;
     v.style.display = 'block';
@@ -139,6 +144,11 @@ async function oneClickCapture() {
     showModelLoading(true);
     // start camera (will reuse if already started)
     if (!v || !v.srcObject) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const msg = 'Camera not available: your browser does not support getUserMedia or page is not served via HTTPS/localhost.';
+        console.error('oneClickCapture failed - getUserMedia unavailable');
+        throw new Error(msg + ' Tip: open this page over HTTPS or localhost and allow camera permission.');
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
       v.srcObject = stream;
       // small delay to allow camera to warm up
