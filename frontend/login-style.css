@@ -17,8 +17,10 @@ section {
 
 .form-box {
   position: relative;
-  width: 400px;
-  height: 450px;
+  width: min(400px, 92vw);
+  max-width: 400px;
+  height: auto;
+  padding: 2rem 1.25rem;
   background: transparent;
   border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 20px;
@@ -32,6 +34,29 @@ h2 {
   font-size: 2em;
   color: #fff;
   text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  section { padding: 2rem 0; }
+  .form-box {
+    width: calc(100% - 32px);
+    margin: 0 16px;
+    border-radius: 14px;
+    padding: 1.25rem;
+  }
+  h2 { font-size: 1.5rem; }
+  .inputbox { margin: 18px 0; width: 100%; }
+  .inputbox input { height: 44px; font-size: 0.95rem; }
+  .inputbox ion-icon { top: 14px; font-size: 1.05rem; }
+  button { height: 44px; font-size: 0.95rem; }
+  .register { margin: 18px 0 8px; font-size: 0.9rem; }
+}
+
+@media (max-width: 360px) {
+  .form-box { padding: 1rem; }
+  h2 { font-size: 1.25rem; }
+  .inputbox input { padding-left: 6px; }
 }
 
 .inputbox {
