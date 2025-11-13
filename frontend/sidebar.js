@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainContent = document.querySelector('.main-content');
   
   if (hamburger && sidebar && mainContent) {
+    // Create or reuse an overlay element that will dim the page when the sidebar is open
+    let overlay = document.getElementById('sidebarOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'sidebarOverlay';
+      document.body.appendChild(overlay);
+    }
     // Toggle sidebar on click (no hover). This makes the sidebar open/close only when
     // the user intentionally clicks the hamburger icon.
     const toggleSidebar = (open) => {
@@ -12,10 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         sidebar.classList.add('visible');
         mainContent.classList.add('sidebar-open');
+        overlay.classList.add('visible');
+        document.body.classList.add('no-scroll');
         hamburger.setAttribute('aria-expanded', 'true');
       } else {
         sidebar.classList.remove('visible');
         mainContent.classList.remove('sidebar-open');
+        overlay.classList.remove('visible');
+        document.body.classList.remove('no-scroll');
         hamburger.setAttribute('aria-expanded', 'false');
       }
     };
@@ -33,6 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSidebar(false);
       }
     });
+
+    // Close when clicking the overlay itself
+    overlay.addEventListener('click', () => toggleSidebar(false));
 
     // Close on Escape key for accessibility
     document.addEventListener('keydown', (e) => {

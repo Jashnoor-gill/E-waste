@@ -67,7 +67,7 @@ input, select, button, textarea {
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 12px #0002;
-  z-index: 100;
+  z-index: 102;
   transition: left 0.3s ease;
 }
 .sidebar.visible {
@@ -130,7 +130,7 @@ input, select, button, textarea {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  z-index: 101;
+  z-index: 103;
   box-shadow: 0 2px 8px #0003;
   transition: background 0.2s;
 }
@@ -167,6 +167,24 @@ input, select, button, textarea {
   .hamburger-menu {
     top: 1rem;
   }
+}
+
+/* Overlay behind the sidebar when open (mobile UX) */
+#sidebarOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  z-index: 101; /* sits below sidebar but above main content */
+}
+#sidebarOverlay.visible {
+  display: block;
+}
+
+/* Prevent body scroll when sidebar + overlay are active */
+body.no-scroll {
+  overflow: hidden;
+  height: 100vh;
 }
 body {
   margin: 0;
