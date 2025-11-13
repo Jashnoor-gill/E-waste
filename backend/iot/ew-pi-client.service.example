@@ -1,0 +1,22 @@
+[Unit]
+Description=E-Waste Pi Client
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ew-pi-client
+Environment=BACKEND_URL=https://your-backend.example.com
+Environment=DEVICE_NAME=raspi-1
+ExecStart=/usr/bin/python3 /home/pi/ew-pi-client/pi_client.py --name ${DEVICE_NAME} --server ${BACKEND_URL}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+# Copy this file to /etc/systemd/system/ew-pi-client.service and edit the paths
+# then enable with:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable ew-pi-client.service
+#   sudo systemctl start ew-pi-client.service

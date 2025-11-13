@@ -118,6 +118,9 @@ import json
 import os
 import subprocess
 import time
+import sys
+import tempfile
+import shutil
 
 import socketio
 
@@ -189,34 +192,77 @@ def attempt_register(payload, max_retries=6):
 def on_capture(data):
     print('Capture command received', data)
     requestId = data.get('requestId')
-    # Call local capture.py to take a photo and return path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    capture_script = os.path.join(script_dir, 'capture_pi.py')
+    # safe tmp path
+    tmp_file = os.path.join('/tmp', f'ew_capture_{requestId}.jpg')
     try:
-        out = subprocess.check_output(['python', 'capture.py'])
-        photo_path = out.decode().strip()
+        # ensure any existing file removed
+        try:
+            if os.path.exists(tmp_file):
+                os.remove(tmp_file)
+        except Exception:
+            pass
+
+        # call the capture helper
+        out = subprocess.check_output([sys.executable, capture_script, '--outfile', tmp_file], stderr=subprocess.STDOUT, timeout=40)
+        photo_path = tmp_file
+        if not os.path.exists(photo_path):
+            raise FileNotFoundError(photo_path)
         print('Photo saved to', photo_path)
-        # Read file and send base64
         with open(photo_path, 'rb') as f:
             b64 = base64.b64encode(f.read()).decode()
-        sio.emit('iot-photo', { 'requestId': requestId, 'imageBase64': b64, 'device': DEVICE_NAME })
+        payload = { 'requestId': requestId, 'image_b64': b64, 'imageBase64': b64, 'device': DEVICE_NAME }
+        sio.emit('iot-photo', payload)
+        print('Sent iot-photo for', requestId)
+    except subprocess.CalledProcessError as e:
+        out = (e.output.decode() if e.output else str(e))
+        print('Capture subprocess failed:', out, file=sys.stderr)
+        sio.emit('iot-photo', { 'requestId': requestId, 'error': out, 'device': DEVICE_NAME })
     except Exception as e:
-        print('Capture failed', e)
+        print('Capture failed', e, file=sys.stderr)
         sio.emit('iot-photo', { 'requestId': requestId, 'error': str(e), 'device': DEVICE_NAME })
+    finally:
+        # optional: keep the file for debugging; if you want cleanup, uncomment
+        # try: os.remove(photo_path)
+        # except Exception: pass
+        pass
 
 @sio.on('run_model')
 def on_run_model(data):
     print('Run model command received', data)
     requestId = data.get('requestId')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    run_script = os.path.join(script_dir, 'run_model_pi.py')
+    tmp_file = os.path.join('/tmp', f'ew_capture_{requestId}.jpg')
     try:
-        out = subprocess.check_output(['python', 'run_model.py'])
-        result = out.decode().strip()
-        # Assume result is JSON or text
+        # If there's no recent capture, attempt to capture first
+        if not os.path.exists(tmp_file):
+            # try to capture
+            capture_script = os.path.join(script_dir, 'capture_pi.py')
+            try:
+                subprocess.check_call([sys.executable, capture_script, '--outfile', tmp_file], timeout=40)
+            except Exception as e:
+                print('Pre-run capture failed:', e, file=sys.stderr)
+
+        if not os.path.exists(tmp_file):
+            raise FileNotFoundError(f'No image available at {tmp_file}')
+
+        # Call run_model_pi.py which posts image to the backend run-model endpoint and prints JSON
+        out = subprocess.check_output([sys.executable, run_script, '--file', tmp_file, '--server', SERVER], stderr=subprocess.STDOUT, timeout=60)
+        txt = out.decode().strip()
         try:
-            parsed = json.loads(result)
+            parsed = json.loads(txt)
         except Exception:
-            parsed = { 'result': result }
+            parsed = { 'result': txt }
         sio.emit('iot-model-result', { 'requestId': requestId, 'result': parsed, 'device': DEVICE_NAME })
+        print('Sent iot-model-result for', requestId, parsed)
+    except subprocess.CalledProcessError as e:
+        out = (e.output.decode() if e.output else str(e))
+        print('Run model subprocess failed:', out, file=sys.stderr)
+        sio.emit('iot-model-result', { 'requestId': requestId, 'error': out, 'device': DEVICE_NAME })
     except Exception as e:
-        print('Run model failed', e)
+        print('Run model failed', e, file=sys.stderr)
         sio.emit('iot-model-result', { 'requestId': requestId, 'error': str(e), 'device': DEVICE_NAME })
 
 
