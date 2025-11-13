@@ -12,20 +12,28 @@ Usage:
 import argparse
 import base64
 import time
+import os
 import requests
 import cv2
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', default='raspi-1')
-    parser.add_argument('--server', required=True)
-    parser.add_argument('--token', default=None)
+    parser.add_argument('--device', default=os.environ.get('DEVICE_ID', 'pi_home'))
+    parser.add_argument('--server', default=os.environ.get('BACKEND_URL', 'https://e-waste-backend-3qxc.onrender.com/') )
+    parser.add_argument('--token', default=None, help='Optional device token (not required for single Pi)')
     parser.add_argument('--fps', type=float, default=1.0)
     parser.add_argument('--camera', type=int, default=0)
     args = parser.parse_args()
 
-    url = args.server.rstrip('/') + '/upload_frame'
+    # allow passing the base endpoint (e.g. https://host/api/frame) or root; normalize
+    base = args.server.rstrip('/')
+    # If the caller passed a full path that already contains /api/frame, use it and append /upload_frame
+    if '/api/frame' in base:
+        url = base.rstrip('/') + '/upload_frame'
+    else:
+        # assume they passed the backend root; build the frame endpoint
+        url = base + '/api/frame/upload_frame'
     cap = cv2.VideoCapture(args.camera)
     if not cap.isOpened():
         print('Failed to open camera')
