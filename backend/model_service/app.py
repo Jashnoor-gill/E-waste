@@ -204,8 +204,30 @@ async def infer_file(file: UploadFile = File(...)):
 
 @app.get('/health')
 async def health():
-    ok = model is not None
-    return {"ok": ok, "model_path": MODEL_PATH if ok else None, "error": getattr(app.state, 'load_error', None)}
+    """
+    Health endpoint. Return ok=True when either:
+    - the model is loaded in memory, or
+    - the model file exists on disk (so the service can load it on demand).
+
+    This makes readiness probes less flaky across worker restarts where the
+    process may not yet have loaded the model into memory but the file is
+    already present (downloaded during previous startup).
+    """
+    # Prefer the in-memory model state when available
+    if model is not None:
+        return {"ok": True, "model_path": MODEL_PATH, "error": None}
+
+    # If the model file exists on disk, report ok=True so external probes
+    # treat the service as ready (it can load the model lazily on first request).
+    try:
+        from pathlib import Path
+        if Path(MODEL_PATH).exists():
+            return {"ok": True, "model_path": MODEL_PATH, "error": getattr(app.state, 'load_error', None)}
+    except Exception:
+        # Fall through to reporting not-ready on unexpected errors
+        pass
+
+    return {"ok": False, "model_path": None, "error": getattr(app.state, 'load_error', None)}
 
 
 # Helpful developer GET routes to avoid confusing 404s in the browser console.
