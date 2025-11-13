@@ -1,0 +1,29 @@
+[Unit]
+Description=E-Waste Pi Client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ew-pi-client
+# Configure backend and device name via Environment or edit the ExecStart below
+Environment=BACKEND_URL=https://your-backend.example.com
+Environment=DEVICE_NAME=pi_home
+# Use the python from the virtualenv created by the install script (adjust path if needed)
+ExecStart=/home/pi/ew-venv/bin/python /home/pi/ew-pi-client/pi_client.py --name ${DEVICE_NAME} --server ${BACKEND_URL}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+# Instructions:
+# 1. Copy this file to the Pi at /etc/systemd/system/ew-pi-client.service
+# 2. Edit BACKEND_URL and DEVICE_NAME or export them in the file
+# 3. Run:
+#    sudo systemctl daemon-reload
+#    sudo systemctl enable ew-pi-client.service
+#    sudo systemctl start ew-pi-client.service
+# 4. View logs:
+#    sudo journalctl -u ew-pi-client.service -f
