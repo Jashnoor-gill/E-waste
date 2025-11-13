@@ -21,11 +21,13 @@ PowerShell example (run from your workstation):
 scp backend/iot/pi_copied/DP-Group-17/Scripts/*.py pi@<PI_IP>:/home/pi/ew-pi-client/
 scp backend/iot/ew-pi-client.service pi@<PI_IP>:/home/pi/
 ```
+scp backend/iot/pi_copied/DP-Group-17/Scripts/*.py Jigar@<PI_IP>:/home/Jigar/ew-pi-client/
+scp backend/iot/ew-pi-client.service Jigar@<PI_IP>:/home/Jigar/
 
 SSH into the Pi and run the installer script (below) or follow manual steps
 ```bash
-ssh pi@<PI_IP>
-cd /home/pi
+ssh Jigar@<PI_IP>
+cd /home/Jigar
 sudo mkdir -p /home/pi/ew-pi-client
 sudo chown pi:pi /home/pi/ew-pi-client
 cd /home/pi/ew-pi-client
@@ -50,7 +52,7 @@ pip install opencv-python
 Install and enable the systemd service
 ```bash
 # move the unit file to systemd
-sudo mv /home/pi/ew-pi-client/ew-pi-client.service /etc/systemd/system/ew-pi-client.service
+sudo mv /home/Jigar/ew-pi-client/ew-pi-client.service /etc/systemd/system/ew-pi-client.service
 sudo systemctl daemon-reload
 # edit /etc/systemd/system/ew-pi-client.service to set BACKEND_URL and DEVICE_NAME if needed
 sudo systemctl enable ew-pi-client.service

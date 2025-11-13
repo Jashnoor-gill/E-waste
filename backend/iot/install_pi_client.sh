@@ -4,16 +4,17 @@
 
 set -euo pipefail
 
-ROOT_DIR="/home/pi"
+ROOT_DIR="/home/Jigar"
 CLIENT_DIR="$ROOT_DIR/ew-pi-client"
 VENV_DIR="$ROOT_DIR/ew-venv"
 
 echo "Installing E-Waste Pi client into $CLIENT_DIR"
 mkdir -p "$CLIENT_DIR"
-chown pi:pi "$CLIENT_DIR" || true
+chown Jigar:Jigar "$CLIENT_DIR" || true
 
 echo "Creating virtualenv at $VENV_DIR"
 python3 -m venv "$VENV_DIR"
+chown -R Jigar:Jigar "$VENV_DIR" || true
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip
 echo "Installing Python dependencies"
@@ -22,7 +23,7 @@ echo "Optional: if you plan to use OpenCV-based streaming, install opencv-python
 echo "To install OpenCV: pip install opencv-python"
 
 echo "If you have not already copied the client scripts into $CLIENT_DIR, copy them now."
-echo "Example (from your workstation): scp backend/iot/pi_copied/DP-Group-17/Scripts/*.py pi@<PI_IP>:$CLIENT_DIR/"
+echo "Example (from your workstation): scp backend/iot/pi_copied/DP-Group-17/Scripts/*.py Jigar@<PI_IP>:$CLIENT_DIR/"
 
 echo "Move the systemd unit into place (if present in $CLIENT_DIR)"
 if [ -f "$CLIENT_DIR/ew-pi-client.service" ]; then

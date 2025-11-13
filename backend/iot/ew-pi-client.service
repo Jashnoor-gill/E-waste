@@ -5,13 +5,13 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/ew-pi-client
+User=Jigar
+WorkingDirectory=/home/Jigar/ew-pi-client
 # Configure backend and device name via Environment or edit the ExecStart below
 Environment=BACKEND_URL=https://e-waste-backend-3qxc.onrender.com/
 Environment=DEVICE_NAME=pi_home
 # Use the python from the virtualenv created by the install script (adjust path if needed)
-ExecStart=/home/pi/ew-venv/bin/python /home/pi/ew-pi-client/pi_client.py --name ${DEVICE_NAME} --server ${BACKEND_URL}
+ExecStart=/home/Jigar/ew-venv/bin/python /home/Jigar/ew-pi-client/pi_client.py --name ${DEVICE_NAME} --server ${BACKEND_URL}
 Restart=on-failure
 RestartSec=5
 
