@@ -5,14 +5,51 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainContent = document.querySelector('.main-content');
   
   if (hamburger && sidebar && mainContent) {
-    hamburger.addEventListener('mouseenter', () => {
-      sidebar.classList.add('visible');
-      mainContent.classList.add('sidebar-open');
+    // Toggle sidebar on click (no hover). This makes the sidebar open/close only when
+    // the user intentionally clicks the hamburger icon.
+    const toggleSidebar = (open) => {
+      const isOpen = typeof open === 'boolean' ? open : !sidebar.classList.contains('visible');
+      if (isOpen) {
+        sidebar.classList.add('visible');
+        mainContent.classList.add('sidebar-open');
+        hamburger.setAttribute('aria-expanded', 'true');
+      } else {
+        sidebar.classList.remove('visible');
+        mainContent.classList.remove('sidebar-open');
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    };
+
+    hamburger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSidebar();
     });
-    
-    sidebar.addEventListener('mouseleave', () => {
-      sidebar.classList.remove('visible');
-      mainContent.classList.remove('sidebar-open');
+
+    // Close when clicking outside the sidebar (on the page)
+    document.addEventListener('click', (e) => {
+      if (!sidebar.classList.contains('visible')) return;
+      const target = e.target;
+      if (!sidebar.contains(target) && target !== hamburger && !hamburger.contains(target)) {
+        toggleSidebar(false);
+      }
+    });
+
+    // Close on Escape key for accessibility
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidebar.classList.contains('visible')) {
+        toggleSidebar(false);
+      }
+    });
+
+    // Make hamburger keyboard accessible (Enter / Space)
+    hamburger.setAttribute('role', 'button');
+    hamburger.setAttribute('tabindex', '0');
+    hamburger.setAttribute('aria-expanded', sidebar.classList.contains('visible') ? 'true' : 'false');
+    hamburger.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSidebar();
+      }
     });
   }
   

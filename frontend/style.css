@@ -108,7 +108,7 @@ input, select, button, textarea {
   border-radius: 8px 0 0 8px;
   transition: background 0.2s, color 0.2s;
 }
-.sidebar-menu a:hover, .sidebar-menu a.active {
+.sidebar-menu a.active {
   background: #388e3c;
   color: #b2ff59;
 }
@@ -134,9 +134,7 @@ input, select, button, textarea {
   box-shadow: 0 2px 8px #0003;
   transition: background 0.2s;
 }
-.hamburger-menu:hover {
-  background: #388e3c;
-}
+/* Hover state for hamburger is applied only on hover-capable devices via media query below */
 .hamburger-menu span {
   width: 24px;
   height: 3px;
@@ -206,9 +204,7 @@ nav a {
   font-size: 1.1rem;
   transition: color 0.2s;
 }
-nav a:hover {
-  color: #b2ff59;
-}
+/* Anchor hover color is applied only on hover-capable devices (see media query at end) */
 
 main, .main-content {
   max-width: 1000px;
@@ -242,7 +238,7 @@ main, .main-content {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
-.dashboard-tabs button.active, .dashboard-tabs button:hover {
+.dashboard-tabs button.active {
   background: #1a4d2e;
   color: #fff;
 }
@@ -258,9 +254,7 @@ main, .main-content {
   width: 100%;
   transition: box-shadow 0.2s;
 }
-.card:hover, .bin-status:hover {
-  box-shadow: 0 6px 24px #0002;
-}
+/* Hover shadow is applied only on hover-capable devices (see media query at end of file) */
 
 button, .btn {
   background: #43a047;
@@ -274,9 +268,7 @@ button, .btn {
   margin: 0.5rem 0;
   transition: background 0.2s;
 }
-button:hover, .btn:hover {
-  background: #1a4d2e;
-}
+/* Button hover styles are applied only on devices that support hover (see media query below) */
 
 .notification-popup {
   position: fixed;
@@ -314,9 +306,7 @@ a {
   color: #388e3c;
   text-decoration: underline;
 }
-a:hover {
-  color: #1a4d2e;
-}
+/* Anchor hover color applied only on hover-capable devices */
 
 @media (max-width: 900px) {
   main, .main-content {
@@ -357,10 +347,7 @@ a:hover {
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(26, 77, 46, 0.3);
-}
+/* Hover effects for stat-card are applied only on hover-capable devices (see media query below) */
 
 .stat-card h3 {
   margin: 0 0 0.5rem 0;
@@ -412,9 +399,7 @@ a:hover {
   transition: transform 0.3s;
 }
 
-.badge:hover {
-  transform: scale(1.05);
-}
+/* Hover effects for badges are applied only on hover-capable devices (see media query below) */
 
 .badge-icon {
   font-size: 2.5rem;
@@ -487,12 +472,6 @@ a:hover {
   position: relative;
 }
 
-.bin-card:hover {
-  border-color: #43a047;
-  box-shadow: 0 6px 20px rgba(67, 160, 71, 0.2);
-  transform: translateY(-3px);
-}
-
 .bin-card.selected {
   border-color: #1a4d2e;
   background: #f1f8f4;
@@ -503,10 +482,6 @@ a:hover {
   opacity: 0.6;
   cursor: not-allowed;
   border-color: #ff5252;
-}
-
-.bin-card.full:hover {
-  transform: none;
 }
 
 .bin-header {
@@ -613,10 +588,7 @@ a:hover {
   transition: all 0.3s;
 }
 
-.category-option:hover {
-  background: #e8f5e9;
-  border-color: #43a047;
-}
+/* Hover styles for category-option are applied only on hover-capable devices (see media query below) */
 
 .category-option.selected {
   background: #c8e6c9;
@@ -775,4 +747,19 @@ a:hover {
 
 .slide-in-up {
   animation: slideInUp 0.5s ease-out;
+}
+
+/* Hover styles (apply only on devices that actually support hover/pointer precision) */
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-menu a:hover { background: #388e3c; color: #b2ff59; }
+  .hamburger-menu:hover { background: #388e3c; }
+  .dashboard-tabs button:hover { background: #1a4d2e; color: #fff; }
+  .card:hover, .bin-status:hover { box-shadow: 0 6px 24px #0002; }
+  button:hover, .btn:hover { background: #1a4d2e; }
+  a:hover { color: #1a4d2e; }
+  .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 24px rgba(26, 77, 46, 0.3); }
+  .badge:hover { transform: scale(1.05); }
+  .bin-card:hover { border-color: #43a047; box-shadow: 0 6px 20px rgba(67, 160, 71, 0.2); transform: translateY(-3px); }
+  .bin-card.full:hover { transform: none; }
+  .category-option:hover { background: #e8f5e9; border-color: #43a047; }
 }
