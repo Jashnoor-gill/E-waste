@@ -72,6 +72,8 @@ import iotRoutes from './iot/iot.js';
 import runModelRouter from './iot/run_model.js';
 app.use('/api/iot', runModelRouter);
 app.use('/api/iot', iotRoutes);
+import frameRouter from './iot/frame_server.js';
+app.use('/api/frame', frameRouter);
 import authRoutes from './routes/auth.js';
 app.use('/api/auth', authRoutes);
 import deviceMgmt from './routes/device_mgmt.js';

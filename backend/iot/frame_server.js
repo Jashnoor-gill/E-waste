@@ -5,9 +5,9 @@ import fs from 'fs';
 import os from 'os';
 import { loadTokens } from '../utils/deviceTokens.js';
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '60mb' })); // allow larger frames if needed
+const router = express.Router();
+router.use(cors());
+router.use(express.json({ limit: '60mb' })); // allow larger frames if needed
 
 // In-memory store for latest frame per device:
 // deviceId -> { frame: '<base64>', ts: 12345, filepath?: '/tmp/..' }
@@ -25,11 +25,11 @@ function verifyDeviceToken(req) {
   return tokens.includes(String(header));
 }
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+router.get('/health', (req, res) => res.json({ ok: true }));
 
 // POST /upload_frame
 // body: { device_id: 'raspi-1', frame: '<base64-jpeg-or-png>' }
-app.post('/upload_frame', (req, res) => {
+router.post('/upload_frame', (req, res) => {
   try {
     if (!verifyDeviceToken(req)) return res.status(403).json({ error: 'missing_or_invalid_device_token' });
     const { device_id, frame } = req.body || {};
@@ -76,7 +76,7 @@ app.post('/upload_frame', (req, res) => {
 });
 
 // GET /latest_frame?device_id=raspi-1
-app.get('/latest_frame', (req, res) => {
+router.get('/latest_frame', (req, res) => {
   const deviceId = req.query.device_id;
   if (!deviceId) return res.status(400).json({ error: 'device_id_required' });
   const entry = frames.get(deviceId);
@@ -85,13 +85,13 @@ app.get('/latest_frame', (req, res) => {
 });
 
 // GET /devices -> list known device ids
-app.get('/devices', (req, res) => {
+router.get('/devices', (req, res) => {
   return res.json(Array.from(frames.keys()));
 });
 
 // SSE endpoint: clients can connect to receive notice when a new frame arrives for a device
 // GET /stream/:deviceId
-app.get('/stream/:deviceId', (req, res) => {
+router.get('/stream/:deviceId', (req, res) => {
   const deviceId = req.params.deviceId;
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -108,7 +108,4 @@ app.get('/stream/:deviceId', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Frame server listening on port ${PORT}`));
-
-export default app;
+export default router;
