@@ -23,7 +23,28 @@ router.post('/capture', async (req, res) => {
   }
 
   if (!targetSocketId) return res.status(503).json({ error: 'No IoT device connected' });
-
+  // If no device connected, allow a simulated response for local testing.
+  // Set env SKIP_DEVICE_FORWARDING=true to enable simulation (default: true for easier local testing).
+  const skipDevice = (process.env.SKIP_DEVICE_FORWARDING || 'true').toLowerCase() === 'true';
+  if (!targetSocketId) {
+    if (skipDevice) {
+      const requestId = makeReqId();
+      // simple placeholder image (tiny base64) to allow downstream testing
+      const placeholderB64 = Buffer.from('simulated-image-bytes').toString('base64');
+      // If caller provided a replySocketId, emit iot-photo so UI that listens on sockets still works
+      const replySocketId = req.body && req.body.replySocketId;
+      const requestMap = req.app.get('requestMap');
+      if (replySocketId && requestMap) requestMap.set(requestId, { replySocketId, ts: Date.now() });
+      try {
+        if (replySocketId) {
+          const io = req.app.get('io');
+          if (io) io.to(replySocketId).emit('iot-photo', { requestId, image_b64: placeholderB64, simulated: true });
+        }
+      } catch (e) { /* ignore */ }
+      return res.status(200).json({ requestId, image_b64: placeholderB64, simulated: true });
+    }
+    return res.status(503).json({ error: 'No IoT device connected' });
+  }
   const requestId = makeReqId();
   // map requestId -> reply socket id (if provided by caller)
   const replySocketId = req.body && req.body.replySocketId;
