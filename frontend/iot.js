@@ -285,6 +285,14 @@ async function requestRunModel() {
     try { data = await res.json(); }
     catch (e) { const txt = await res.text().catch(()=> 'Invalid JSON'); throw new Error('Invalid JSON response: '+txt.slice(0,200)); }
     console.log('run-model requested', data);
+    // Render result returned directly or wrapped in { result: { ... } }
+    try {
+      if (data && data.result) renderModelResult(data.result);
+      else if (data) renderModelResult(data);
+    } catch (err) {
+      console.warn('Failed to render model result', err);
+    }
+    showModelLoading(false);
   } catch (err) {
     console.error('run model request failed', err);
     alert('Run model request failed: ' + err.message);
