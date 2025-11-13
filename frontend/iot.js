@@ -29,6 +29,13 @@ function setupUi() {
   if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
   if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
   if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+  // If browser does not support getUserMedia, disable webcam controls with a helpful title
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const note = 'Camera unavailable (requires HTTPS or localhost and browser support)';
+    [webcamStartBtn, webcamStopBtn, webcamCaptureBtn, webcamOneClickBtn].forEach(b => {
+      if (b) { b.disabled = true; b.title = note; }
+    });
+  }
   // wire prominent test button if present
   const testBtn = document.getElementById('testCameraBtn');
   if (testBtn) testBtn.addEventListener('click', async (e) => {
