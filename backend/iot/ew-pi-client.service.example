@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/ew-pi-client
-Environment=BACKEND_URL=https://your-backend.example.com
+Environment=BACKEND_URL=https://e-waste-backend-3qxc.onrender.com/
 Environment=DEVICE_NAME=raspi-1
 ExecStart=/usr/bin/python3 /home/pi/ew-pi-client/pi_client.py --name ${DEVICE_NAME} --server ${BACKEND_URL}
 Restart=on-failure

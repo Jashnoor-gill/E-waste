@@ -55,8 +55,8 @@ ls -l /tmp/test_pi.jpg
 
 6. Test run-model POST to backend (replace BACKEND_URL):
 
-```powershell
-export BACKEND_URL=https://your-backend.example.com
+```bash
+export BACKEND_URL=https://e-waste-backend-3qxc.onrender.com/
 python3 run_model_pi.py --file /tmp/test_pi.jpg --server $BACKEND_URL
 ```
 

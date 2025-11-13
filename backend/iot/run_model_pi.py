@@ -20,7 +20,7 @@ import requests
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', required=True)
-    parser.add_argument('--server', default=os.environ.get('BACKEND_URL', 'http://localhost:3000'))
+    parser.add_argument('--server', default=os.environ.get('BACKEND_URL', 'https://e-waste-backend-3qxc.onrender.com/'))
     args = parser.parse_args()
 
     if not os.path.exists(args.file):
