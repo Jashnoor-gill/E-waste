@@ -22,6 +22,9 @@ function setupUi() {
   const webcamOneClickBtn = document.getElementById('webcamOneClickBtn');
   const imgContainer = document.getElementById('iotImageContainer');
   const resultContainer = document.getElementById('iotModelResult');
+  const startPiFeedBtn = document.getElementById('startPiFeedBtn');
+  const stopPiFeedBtn = document.getElementById('stopPiFeedBtn');
+  const piDeviceIdInput = document.getElementById('piDeviceIdInput');
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
   if (runBtn) runBtn.addEventListener('click', requestRunModel);
@@ -29,6 +32,8 @@ function setupUi() {
   if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
   if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
   if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+  if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
+  if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
   // If browser does not support getUserMedia, disable webcam controls with a helpful title
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     const note = 'Camera unavailable (requires HTTPS or localhost and browser support)';
@@ -90,6 +95,55 @@ function setupUi() {
     renderModelResult(payload);
     updateStatus();
   });
+
+  // Remote Pi feed handlers (SSE + fetch latest)
+  let _piEvt = null;
+  let _piPolling = null;
+  async function fetchAndUpdatePiFrame(deviceId) {
+    try {
+      const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
+      if (!res.ok) return;
+      const j = await res.json();
+      if (j && j.frame) {
+        const img = document.getElementById('remoteFrameImg');
+        if (img) {
+          img.src = 'data:image/jpeg;base64,' + j.frame;
+          img.style.display = 'block';
+        }
+      }
+    } catch (e) { console.warn('fetchAndUpdatePiFrame failed', e); }
+  }
+
+  function startPiFeed() {
+    const deviceId = (piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value : 'pi_home';
+    // prefer SSE
+    try {
+      stopPiFeed();
+      _piEvt = new EventSource(`${ORIGIN.replace(/\/$/, '')}/api/frame/stream/${encodeURIComponent(deviceId)}`);
+      _piEvt.onmessage = (e) => {
+        // when event arrives, fetch latest frame and update image
+        fetchAndUpdatePiFrame(deviceId);
+      };
+      _piEvt.onerror = (err) => {
+        console.warn('Pi feed SSE error', err);
+        // fallback to polling every 2s
+        if (!_piPolling) _piPolling = setInterval(() => fetchAndUpdatePiFrame(deviceId), 2000);
+      };
+      // initial fetch
+      fetchAndUpdatePiFrame(deviceId);
+    } catch (err) {
+      console.warn('startPiFeed failed, falling back to polling', err);
+      if (!_piPolling) _piPolling = setInterval(() => fetchAndUpdatePiFrame(deviceId), 2000);
+    }
+  }
+
+  function stopPiFeed() {
+    try {
+      if (_piEvt) { _piEvt.close(); _piEvt = null; }
+    } catch (e) { /* ignore */ }
+    try { if (_piPolling) { clearInterval(_piPolling); _piPolling = null; } } catch (e) { }
+    const img = document.getElementById('remoteFrameImg'); if (img) img.style.display = 'none';
+  }
 }
 
 // Browser webcam helpers --------------------------------------------------
