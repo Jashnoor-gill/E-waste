@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Register — E-Waste</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .auth-container{max-width:480px;margin:5rem auto;padding:1.5rem;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.08)}
+    .auth-container h2{margin:0 0 1rem}
+    .auth-container form{display:flex;flex-direction:column;gap:0.75rem}
+  </style>
+</head>
+<body>
+  <main class="main-content">
+    <div class="auth-container">
+      <h2>Create an account</h2>
+      <form id="registerForm">
+        <label>Name<input name="name" required></label>
+        <label>Email<input name="email" type="email" required></label>
+        <label>Password<input name="password" type="password" required minlength="6"></label>
+        <button type="submit" class="btn">Register</button>
+      </form>
+      <p style="margin-top:1rem">Already have an account? <a href="login.html">Sign in</a></p>
+    </div>
+  </main>
+  <script type="module">
+    import { register } from './auth.js';
+    const f = document.getElementById('registerForm');
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try { await register(f); } catch (err) { alert(err && err.error ? err.error : 'Register failed'); }
+    });
+  </script>
+</body>
+</html>

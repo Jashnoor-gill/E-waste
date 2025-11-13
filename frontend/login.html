@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login — E-Waste</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Minimal inline styles for auth forms; replace with your assets/CSS */
+    .auth-container{max-width:420px;margin:6rem auto;padding:1.5rem;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.08)}
+    .auth-container h2{margin:0 0 1rem}
+    .auth-container form{display:flex;flex-direction:column;gap:0.75rem}
+  </style>
+</head>
+<body>
+  <main class="main-content">
+    <div class="auth-container">
+      <h2>Sign in</h2>
+      <form id="loginForm">
+        <label>Email<input name="email" type="email" required></label>
+        <label>Password<input name="password" type="password" required></label>
+        <button type="submit" class="btn">Sign in</button>
+      </form>
+      <p style="margin-top:1rem">Don't have an account? <a href="register.html">Register</a></p>
+    </div>
+  </main>
+  <script type="module">
+    import { login } from './auth.js';
+    const f = document.getElementById('loginForm');
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try { await login(f); } catch (err) { alert(err && err.error ? err.error : 'Login failed'); }
+    });
+  </script>
+</body>
+</html>
