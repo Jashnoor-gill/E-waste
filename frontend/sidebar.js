@@ -51,6 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSidebar();
       }
     });
+
+    // Auto-close sidebar when a menu link is clicked (mobile-friendly).
+    // Use event delegation so links added dynamically are handled.
+    sidebar.addEventListener('click', (e) => {
+      const anchor = e.target.closest('a');
+      if (!anchor) return;
+      // If the anchor points to an in-page anchor or navigation, close the sidebar.
+      // Delay slightly so navigation or other handlers can run.
+      setTimeout(() => toggleSidebar(false), 50);
+    });
   }
   
   // Ensure a Dashboard link exists in the sidebar that opens the full dashboard page
