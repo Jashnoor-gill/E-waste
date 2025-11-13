@@ -36,6 +36,20 @@ function setupUi() {
       if (b) { b.disabled = true; b.title = note; }
     });
   }
+  // If page is not a secure context (HTTPS) and not localhost, show a small hint
+  const insecure = (typeof window !== 'undefined' && !window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1');
+  if (insecure) {
+    const hint = document.createElement('div');
+    hint.style.margin = '0.5rem 0';
+    hint.style.padding = '0.5rem 0.75rem';
+    hint.style.background = '#fff3e0';
+    hint.style.border = '1px solid #ffd54f';
+    hint.style.borderRadius = '8px';
+    hint.style.color = '#6a4f00';
+    hint.style.fontSize = '0.95rem';
+    hint.textContent = 'Camera features are disabled on non-secure pages. Preview camera functionality will work on the deployed site (HTTPS) or on localhost.';
+    try { const container = document.getElementById('iotImageContainer') || document.body; container.insertBefore(hint, container.firstChild); } catch (e) { /* ignore */ }
+  }
   // wire prominent test button if present
   const testBtn = document.getElementById('testCameraBtn');
   if (testBtn) testBtn.addEventListener('click', async (e) => {
