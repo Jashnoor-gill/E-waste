@@ -106,4 +106,60 @@ router.post('/capture', async (req, res) => {
   return res.status(202).json({ requestId, message: 'Capture requested' });
 });
 
+// List connected devices (convenience endpoint under /api/iot/devices)
+router.get('/devices', (req, res) => {
+  try {
+    const devices = req.app.get('devices');
+    if (!devices) return res.json({ devices: [], count: 0 });
+    const out = [];
+    for (const [name, socketId] of devices.entries()) out.push({ name, socketId });
+    return res.json({ devices: out, count: out.length });
+  } catch (e) {
+    return res.status(500).json({ error: 'failed to list devices' });
+  }
+});
+
+// Remote-capture endpoint: always run local/tracked Pi script and return image + model result
+router.post('/remote-capture', async (req, res) => {
+  const requestId = makeReqId();
+  const io = req.app.get('io');
+  try {
+    const py = process.env.PYTHON || 'python3';
+    const scriptsRoot = path.resolve(process.cwd(), 'backend', 'iot', 'pi_copied', 'DP-Group-17', 'Scripts');
+    const mainPy = path.join(scriptsRoot, 'main.py');
+    if (!fs.existsSync(mainPy)) return res.status(500).json({ error: 'local pi main.py not found', path: mainPy });
+    const tmpDir = process.env.TMPDIR || process.env.TEMP || process.env.TMP || '/tmp';
+    const tmpImage = path.join(tmpDir, `ew_capture_${requestId}.jpg`);
+    const tmpJson = path.join(tmpDir, `ew_result_${requestId}.json`);
+    const args = [mainPy, '--outfile', tmpImage, '--result-file', tmpJson];
+    const proc = spawnSync(py, args, { timeout: 120000, windowsHide: true });
+    if (proc.error) {
+      console.error('Failed to run local Pi script:', proc.error);
+      return res.status(500).json({ error: 'failed to run local pi script', details: String(proc.error) });
+    }
+    if (proc.status !== 0) {
+      const stderr = proc.stderr ? proc.stderr.toString() : '<no stderr>';
+      console.error('Pi script exit', proc.status, stderr);
+      return res.status(500).json({ error: 'pi script non-zero exit', status: proc.status, stderr });
+    }
+    let parsed = null;
+    if (fs.existsSync(tmpJson)) {
+      try { parsed = JSON.parse(fs.readFileSync(tmpJson, 'utf8')); } catch (e) { parsed = { error: 'failed to parse result json' }; }
+    }
+    let b64 = null;
+    const imagePath = (parsed && parsed.image_path) ? parsed.image_path : tmpImage;
+    if (fs.existsSync(imagePath)) b64 = fs.readFileSync(imagePath).toString('base64');
+    // Emit to any listening sockets if desired
+    const emitTo = req.body && req.body.replySocketId;
+    if (emitTo && io) {
+      io.to(emitTo).emit('iot-photo', { requestId, image_b64: b64 });
+      io.to(emitTo).emit('iot-model-result', { requestId, result: parsed });
+    }
+    return res.json({ requestId, image_b64: b64, result: parsed });
+  } catch (e) {
+    console.error('remote-capture error', e);
+    return res.status(500).json({ error: 'remote-capture-failed', details: String(e) });
+  }
+});
+
 export default router;
