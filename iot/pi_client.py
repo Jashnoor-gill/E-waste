@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import time
+import requests
 
 import socketio
 
@@ -91,9 +92,30 @@ def on_capture(data):
         photo_path = out.decode().strip()
         print('Photo saved to', photo_path)
         # Read file and send base64
+        if not photo_path:
+            raise RuntimeError('capture did not return a file path')
         with open(photo_path, 'rb') as f:
             b64 = base64.b64encode(f.read()).decode()
+        # emit over socket
         sio.emit('iot-photo', { 'requestId': requestId, 'imageBase64': b64, 'device': DEVICE_NAME })
+        # also POST to frame server so latest_frame and SSE feed have the frame
+        try:
+            frame_url = f"{SERVER.rstrip('/')}/api/frame/upload_frame"
+            headers = { 'Content-Type': 'application/json' }
+            # include device token in header if provided via env/arg
+            TOKEN = os.environ.get('DEVICE_TOKEN') or os.environ.get('DEVICE_TOK') or None
+            # override TOKEN if CLI arg provided (args.token is processed at bottom)
+            if 'TOKEN' in globals() and globals().get('TOKEN'):
+                TOKEN = globals().get('TOKEN')
+            if TOKEN:
+                headers['X-Device-Token'] = TOKEN
+            resp = requests.post(frame_url, json={ 'device_id': DEVICE_NAME, 'frame': b64 }, headers=headers, timeout=10)
+            if resp.status_code != 200 and resp.status_code != 201:
+                print('Frame upload failed', resp.status_code, resp.text[:200])
+            else:
+                print('Frame uploaded to server')
+        except Exception as e:
+            print('Error uploading frame to server', e)
     except Exception as e:
         print('Capture failed', e)
         sio.emit('iot-photo', { 'requestId': requestId, 'error': str(e), 'device': DEVICE_NAME })
