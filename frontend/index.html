@@ -64,6 +64,10 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Load dashboard as an ES module so imports work -->
   <script type="module" src="dashboard.js"></script>
+  <script>
+    // Disable local webcam by default on deployed site pages that load iot.js
+    window.DISABLE_LOCAL_WEBCAM = true;
+  </script>
   
 </body>
 </html>

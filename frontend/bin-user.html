@@ -72,6 +72,10 @@
   <script type="module" src="notifications.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="config.js"></script>
+  <script>
+    // Disable local webcam in deployed site so UI uses remote Pi feed only
+    window.DISABLE_LOCAL_WEBCAM = true;
+  </script>
   <script type="module">
     import { renderBinUserDashboard } from './dashboard.js';
     // render the Bin User dashboard
