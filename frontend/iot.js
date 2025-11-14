@@ -125,7 +125,7 @@ function setupUi() {
   }
 
   function startPiFeed(deviceId) {
-    deviceId = deviceId || ((piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value : 'pi_home');
+    deviceId = deviceId || ((piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value : 'raspi-1');
     // prefer SSE
     try {
       stopPiFeed();
