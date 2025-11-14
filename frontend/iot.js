@@ -28,7 +28,7 @@ function setupUi() {
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
   if (runBtn) runBtn.addEventListener('click', requestRunModel);
-  if (webcamStartBtn) webcamStartBtn.addEventListener('click', startWebcam);
+  if (webcamStartBtn) webcamStartBtn.addEventListener('click', () => startPreferredCamera());
   if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
   if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
   if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
@@ -114,8 +114,8 @@ function setupUi() {
     } catch (e) { console.warn('fetchAndUpdatePiFrame failed', e); }
   }
 
-  function startPiFeed() {
-    const deviceId = (piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value : 'pi_home';
+  function startPiFeed(deviceId) {
+    deviceId = deviceId || ((piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value : 'pi_home');
     // prefer SSE
     try {
       stopPiFeed();
@@ -144,6 +144,51 @@ function setupUi() {
     try { if (_piPolling) { clearInterval(_piPolling); _piPolling = null; } } catch (e) { }
     const img = document.getElementById('remoteFrameImg'); if (img) img.style.display = 'none';
   }
+
+  // Check whether the Pi has a recent frame available. Returns true if a frame
+  // timestamp is within `maxAgeSec` seconds.
+  async function piHasRecentFrame(deviceId = 'raspi-1', maxAgeSec = 10) {
+    try {
+      const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
+      if (!res.ok) return false;
+      const j = await res.json();
+      if (!j) return false;
+      // The frame endpoint may return an object with `timestamp` or `ts` or only `frame`;
+      // attempt to use common fields and fall back to presence of `frame`.
+      const ts = j.timestamp || j.ts || j.time || j.t || null;
+      if (ts) {
+        const age = (Date.now() - new Date(ts).getTime()) / 1000;
+        return age <= maxAgeSec;
+      }
+      // if no timestamp, consider any returned frame as recent enough
+      return !!j.frame;
+    } catch (e) {
+      console.warn('piHasRecentFrame error', e);
+      return false;
+    }
+  }
+
+  // Prefer Pi feed when available; otherwise start local webcam.
+  async function startPreferredCamera(deviceId = 'raspi-1') {
+    try {
+      const hasPi = await piHasRecentFrame(deviceId, 10);
+      if (hasPi) {
+        // stop local webcam if running
+        try { if (_webcamStream) { stopWebcam(); } } catch(e){}
+        // start Pi feed
+        startPiFeed(deviceId);
+      } else {
+        // fall back to local webcam
+        await startWebcam();
+      }
+    } catch (err) {
+      console.warn('startPreferredCamera failed', err);
+      // fallback: start webcam
+      try { await startWebcam(); } catch(e){}
+    }
+  }
+  // Expose helpers so autostart and other scripts can call them from global scope
+  try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; } catch(e) {}
 }
 
 // Browser webcam helpers --------------------------------------------------
@@ -375,9 +420,11 @@ try {
   const params = new URLSearchParams(window.location.search);
   const auto = params.get('autostart') === '1' || params.get('autostart') === 'true';
   // Only auto-start if we're on the dashboard and `autostart=1` is present.
-  if (isDashboard && auto) {
+    if (isDashboard && auto) {
     setTimeout(() => {
-      startWebcam().catch(err => console.warn('Auto-start webcam failed', err));
+        // startPreferredCamera is defined inside setupUi and exposed on window by setupUi
+        try { if (window.startPreferredCamera) window.startPreferredCamera().catch(err => console.warn('Auto-start camera failed', err)); }
+        catch(e) { console.warn('Auto-start camera invocation failed', e); }
     }, 250);
   }
 } catch (e) { /* ignore */ }
