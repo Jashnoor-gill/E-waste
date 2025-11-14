@@ -4,6 +4,8 @@ from gpiozero import Device
 from gpiozero.pins.pigpio import PiGPIOFactory
 import time
 
+import argparse
+import json
 from classify_image import classify_image
 from capture_image import capture  # <-- added this import
 from send_frame import send as send_frame_to_backend
@@ -29,9 +31,23 @@ CATEGORY_MAP = {
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--outfile', default=None, help='Optional path to save the captured image')
+    parser.add_argument('--result-file', default=None, help='Optional path to write JSON result {label,image_path}')
+    args = parser.parse_args()
+
     a_time=time.time()
     print("Capturing image...")
-    image_path = capture()  # capture and get file path
+    image_path = capture()
+    if args.outfile:
+        try:
+            # copy latest capture to the requested outfile (ensure using filesystem)
+            import shutil
+            shutil.copy(str(image_path), args.outfile)
+            image_path = args.outfile
+            print('Saved copy to', args.outfile)
+        except Exception as e:
+            print('Failed to copy to outfile:', e)
 
     # Send captured image to backend so the website can display it
     try:
@@ -59,6 +75,16 @@ def main():
     time.sleep(1)
 
 
+
+    # Optionally write a JSON result file so a supervising process can read results
+    if args.result_file:
+        try:
+            out = {'label': label, 'image_path': str(image_path)}
+            with open(args.result_file, 'w') as f:
+                json.dump(out, f)
+            print('Wrote result JSON to', args.result_file)
+        except Exception as e:
+            print('Failed to write result file', e)
 
     # Finally, close the factory
     Device.pin_factory.close()
