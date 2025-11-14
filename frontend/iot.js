@@ -27,6 +27,8 @@ function setupUi() {
   const resultContainer = document.getElementById('iotModelResult');
   const startPiFeedBtn = document.getElementById('startPiFeedBtn');
   const stopPiFeedBtn = document.getElementById('stopPiFeedBtn');
+  const startPiCameraBtn = document.getElementById('startPiCameraBtn');
+  const stopPiCameraBtn = document.getElementById('stopPiCameraBtn');
   const piDeviceIdInput = document.getElementById('piDeviceIdInput');
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
@@ -44,6 +46,8 @@ function setupUi() {
   }
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
+  if (startPiCameraBtn) startPiCameraBtn.addEventListener('click', () => startPiCamera());
+  if (stopPiCameraBtn) stopPiCameraBtn.addEventListener('click', () => stopPiCamera());
   // If browser does not support getUserMedia, disable webcam controls with a helpful title
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     const note = 'Camera unavailable (requires HTTPS or localhost and browser support)';
@@ -92,12 +96,38 @@ function setupUi() {
   socket.on('iot-photo', (payload) => {
     console.log('Received iot-photo', payload);
     showCaptureLoading(false);
-    if (imgContainer && payload && payload.imageBase64) {
-      imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${payload.imageBase64}" style="max-width:100%; border-radius:8px;"/>`;
+    // Accept multiple possible keys from various Pi/client implementations
+    const imgB64 = payload && (payload.imageBase64 || payload.image_b64 || payload.image || payload.frame || payload.img);
+    if (imgContainer && imgB64) {
+      imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
+      // If device id is provided, persist the received frame to the frame server
+      try {
+        const deviceId = payload.device || payload.device_id || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
+        persistFrameToServer(deviceId, imgB64).catch((e) => console.warn('persistFrameToServer failed', e));
+      } catch (e) { /* ignore */ }
     } else if (imgContainer && payload && payload.error) {
       imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Capture error: ${payload.error}</div>`;
     }
+    // allow next periodic capture to run
+    try { _piCaptureInFlight = false; } catch(e){}
   });
+
+  // Persist an incoming base64 frame to the backend frame server so
+  // `GET /api/frame/latest_frame` and SSE `/api/frame/stream/:deviceId` can be used.
+  async function persistFrameToServer(deviceId, base64Frame) {
+    if (!deviceId || !base64Frame) return;
+    try {
+      const url = `${ORIGIN.replace(/\/$/, '')}/api/frame/upload_frame`;
+      const body = { device_id: deviceId, frame: base64Frame };
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => `Status ${res.status}`);
+        console.warn('persistFrameToServer: upload failed', res.status, txt.slice(0,200));
+      }
+    } catch (err) {
+      console.warn('persistFrameToServer error', err);
+    }
+  }
 
   socket.on('iot-model-result', (payload) => {
     console.log('Received iot-model-result', payload);
@@ -205,6 +235,48 @@ function setupUi() {
   // Expose helpers so autostart and other scripts can call them from global scope
   try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; } catch(e) {}
 }
+
+// Periodic capture loop (frontend-driven) to simulate a live Pi camera without changing Pi code.
+let _piCameraInterval = null;
+let _piCaptureInFlight = false;
+let _piCameraIntervalMs = 3000; // default capture interval when camera is "on"
+
+function startPiCamera(deviceId) {
+  deviceId = deviceId || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
+  // start feed (SSE + initial fetch)
+  try { if (window.startPiFeed) window.startPiFeed(deviceId); } catch(e){}
+  // avoid starting multiple intervals
+  if (_piCameraInterval) return;
+  _piCaptureInFlight = false;
+  // immediate first capture
+  (async () => {
+    if (!_piCaptureInFlight) {
+      try { _piCaptureInFlight = true; await requestCapture(); } catch(e) { _piCaptureInFlight = false; }
+    }
+  })();
+  _piCameraInterval = setInterval(async () => {
+    if (_piCaptureInFlight) return;
+    _piCaptureInFlight = true;
+    try {
+      await requestCapture();
+    } catch (e) {
+      console.warn('Periodic requestCapture failed', e);
+      _piCaptureInFlight = false;
+    }
+  }, _piCameraIntervalMs);
+  // update UI buttons if present
+  try { const s = document.getElementById('startPiCameraBtn'); const t = document.getElementById('stopPiCameraBtn'); if (s) s.disabled = true; if (t) t.disabled = false; } catch(e){}
+}
+
+function stopPiCamera() {
+  if (_piCameraInterval) { clearInterval(_piCameraInterval); _piCameraInterval = null; }
+  _piCaptureInFlight = false;
+  // stop feed if desired
+  try { if (window.stopPiFeed) window.stopPiFeed(); } catch(e){}
+  try { const s = document.getElementById('startPiCameraBtn'); const t = document.getElementById('stopPiCameraBtn'); if (s) s.disabled = false; if (t) t.disabled = true; } catch(e){}
+}
+
+try { window.startPiCamera = startPiCamera; window.stopPiCamera = stopPiCamera; } catch(e) {}
 
 // Browser webcam helpers --------------------------------------------------
 let _webcamStream = null;
