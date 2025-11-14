@@ -24,10 +24,13 @@ const io = new Server(server, { cors: { origin: '*' } });
 const devices = new Map();
 // Map requestId => { replySocketId }
 const requestMap = new Map();
+// Map deviceId -> latest model result { ts, payload }
+const modelResults = new Map();
 
 app.set('io', io);
 app.set('devices', devices);
 app.set('requestMap', requestMap);
+app.set('modelResults', modelResults);
 
 app.use(cors());
 app.use(express.json());
@@ -74,6 +77,8 @@ app.use('/api/iot', runModelRouter);
 app.use('/api/iot', iotRoutes);
 import frameRouter from './iot/frame_server.js';
 app.use('/api/frame', frameRouter);
+import modelResultsRouter from './iot/model_results.js';
+app.use('/api/iot', modelResultsRouter);
 import authRoutes from './routes/auth.js';
 app.use('/api/auth', authRoutes);
 import deviceMgmt from './routes/device_mgmt.js';
@@ -149,6 +154,14 @@ io.on('connection', (socket) => {
         return;
       }
       io.emit('iot-model-result', payload);
+      // Persist latest model result per device so clients can fetch it later
+      try {
+        const device = payload && (payload.device || payload.device_id || payload.deviceId || null);
+        if (device) {
+          const entry = { ts: Date.now(), payload };
+          modelResults.set(device, entry);
+        }
+      } catch (e) { /* ignore persistence errors */ }
     } catch (err) { console.error('iot-model-result relay error', err); }
   });
 
