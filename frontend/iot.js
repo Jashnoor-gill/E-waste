@@ -11,6 +11,9 @@ const socket = ioClient(SOCKET_URL);
 
 // Expose to window for quick debugging
 window.iotSocket = socket;
+// If set to true (or '1'/'true') in a site-level config, the frontend will
+// completely disable use of the local laptop webcam and only use Pi feeds.
+const DISABLE_LOCAL_WEBCAM = (typeof window !== 'undefined' && (window.DISABLE_LOCAL_WEBCAM === true || window.DISABLE_LOCAL_WEBCAM === '1' || window.DISABLE_LOCAL_WEBCAM === 'true'));
 
 // UI helper: attach handlers if buttons exist
 function setupUi() {
@@ -28,10 +31,17 @@ function setupUi() {
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
   if (runBtn) runBtn.addEventListener('click', requestRunModel);
-  if (webcamStartBtn) webcamStartBtn.addEventListener('click', () => startPreferredCamera());
-  if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
-  if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
-  if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+  if (DISABLE_LOCAL_WEBCAM) {
+    // Hide/disable all local webcam controls when local webcam is disabled
+    [webcamStartBtn, webcamStopBtn, webcamCaptureBtn, webcamOneClickBtn].forEach(b => { if (b) { b.style.display = 'none'; b.disabled = true; } });
+    // Hide local video element if present
+    try { const v = document.getElementById(VIDEO_ID); if (v) v.style.display = 'none'; } catch(e){}
+  } else {
+    if (webcamStartBtn) webcamStartBtn.addEventListener('click', () => startPreferredCamera());
+    if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
+    if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
+    if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+  }
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
   // If browser does not support getUserMedia, disable webcam controls with a helpful title
@@ -178,13 +188,18 @@ function setupUi() {
         // start Pi feed
         startPiFeed(deviceId);
       } else {
-        // fall back to local webcam
+        // fall back to local webcam unless local webcam usage is disabled
+        if (DISABLE_LOCAL_WEBCAM) {
+          // Inform user and do not start local camera
+          try { alert('No Pi feed available and local webcam usage is disabled by site configuration.'); } catch(e) {}
+          return;
+        }
         await startWebcam();
       }
     } catch (err) {
       console.warn('startPreferredCamera failed', err);
       // fallback: start webcam
-      try { await startWebcam(); } catch(e){}
+      try { if (!DISABLE_LOCAL_WEBCAM) await startWebcam(); } catch(e){}
     }
   }
   // Expose helpers so autostart and other scripts can call them from global scope
@@ -229,6 +244,7 @@ function stopWebcam() {
 }
 
 async function captureFromWebcam() {
+  if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
   const v = document.getElementById(VIDEO_ID);
   const imgContainer = document.getElementById('iotImageContainer');
   if (!v || !v.srcObject) return alert('Camera not started');
@@ -258,6 +274,7 @@ async function captureFromWebcam() {
 
 // One-click flow: start camera, capture one frame, send it, then stop camera.
 async function oneClickCapture() {
+  if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
   const v = document.getElementById(VIDEO_ID);
   const imgContainer = document.getElementById('iotImageContainer');
   try {
