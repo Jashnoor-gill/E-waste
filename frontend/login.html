@@ -38,6 +38,17 @@
   </div>
 </section>
 <!-- partial -->
+  <!-- partial -->
+  <!-- Backend URL snippet: set your deployed backend root here (no trailing slash). -->
+  <!-- Replace the placeholder below with your Render backend URL, e.g. https://ewaste-backend.onrender.com -->
+  <script>
+    // If your frontend is hosted separately from the API, set the backend host here.
+    // The frontend modules use `window.BACKEND_URL` (optional) and `window.__API_BASE__` (preferred).
+    // Keep the placeholder until you replace it with your actual backend URL.
+    window.BACKEND_URL = window.BACKEND_URL || 'https://your-backend.example.com';
+    // __API_BASE__ should include the `/api` suffix used in the server (don't include extra slashes).
+    window.__API_BASE__ = window.__API_BASE__ || (window.BACKEND_URL.replace(/\/$/, '') + '/api');
+  </script>
   <script type="module">
     import { login } from './auth.js';
     const form = document.getElementById('loginForm');
