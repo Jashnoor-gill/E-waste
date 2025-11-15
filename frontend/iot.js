@@ -1,5 +1,5 @@
 import { io as ioClient } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
-import { getMockEnabled, setMockEnabled } from './api.js';
+import { getMockEnabled, setMockEnabled, getBins } from './api.js';
 
 // Connect to backend socket.io. Use the current page origin so local dev points to local backend
 const DEFAULT_BACKEND = 'https://e-waste-backend-3qxc.onrender.com';
@@ -202,6 +202,27 @@ function setupUi() {
   let _piPolling = null;
   async function fetchAndUpdatePiFrame(deviceId) {
     try {
+      // If mock mode is enabled, read the latest mock frame from localStorage
+      if (getMockEnabled && getMockEnabled()) {
+        try {
+          const key = `mock_latest_frame_${deviceId}`;
+          const b64 = localStorage.getItem(key);
+          const img = document.getElementById('remoteFrameImg');
+          if (!img) return;
+          if (b64) {
+            // try detect if SVG or JPEG/PNG by looking for '<' inside decoded sample
+            let decoded = '';
+            try { decoded = atob(b64.slice(0, 80)); } catch (e) { decoded = ''; }
+            if (decoded && decoded[0] === '<') img.src = 'data:image/svg+xml;base64,' + b64;
+            else img.src = 'data:image/jpeg;base64,' + b64;
+            img.style.display = 'block';
+          } else {
+            img.style.display = 'none';
+          }
+        } catch (e) { console.warn('mock fetchAndUpdatePiFrame failed', e); }
+        return;
+      }
+
       const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
       if (!res.ok) return;
       const j = await res.json();
@@ -220,18 +241,24 @@ function setupUi() {
     // prefer SSE
     try {
       stopPiFeed();
-      _piEvt = new EventSource(`${ORIGIN.replace(/\/$/, '')}/api/frame/stream/${encodeURIComponent(deviceId)}`);
-      _piEvt.onmessage = (e) => {
-        // when event arrives, fetch latest frame and update image
+      if (getMockEnabled && getMockEnabled()) {
+        // In mock mode, poll localStorage for updates
         fetchAndUpdatePiFrame(deviceId);
-      };
-      _piEvt.onerror = (err) => {
-        console.warn('Pi feed SSE error', err);
-        // fallback to polling every 2s
         if (!_piPolling) _piPolling = setInterval(() => fetchAndUpdatePiFrame(deviceId), 2000);
-      };
-      // initial fetch
-      fetchAndUpdatePiFrame(deviceId);
+      } else {
+        _piEvt = new EventSource(`${ORIGIN.replace(/\/$/, '')}/api/frame/stream/${encodeURIComponent(deviceId)}`);
+        _piEvt.onmessage = (e) => {
+          // when event arrives, fetch latest frame and update image
+          fetchAndUpdatePiFrame(deviceId);
+        };
+        _piEvt.onerror = (err) => {
+          console.warn('Pi feed SSE error', err);
+          // fallback to polling every 2s
+          if (!_piPolling) _piPolling = setInterval(() => fetchAndUpdatePiFrame(deviceId), 2000);
+        };
+        // initial fetch
+        fetchAndUpdatePiFrame(deviceId);
+      }
     } catch (err) {
       console.warn('startPiFeed failed, falling back to polling', err);
       if (!_piPolling) _piPolling = setInterval(() => fetchAndUpdatePiFrame(deviceId), 2000);
@@ -250,6 +277,14 @@ function setupUi() {
   // timestamp is within `maxAgeSec` seconds.
   async function piHasRecentFrame(deviceId = 'raspi-1', maxAgeSec = 10) {
     try {
+      // In mock mode, check whether a locally stored mock frame exists
+      if (getMockEnabled && getMockEnabled()) {
+        try {
+          const key = `mock_latest_frame_${deviceId}`;
+          const b64 = localStorage.getItem(key);
+          return !!b64;
+        } catch (e) { return false; }
+      }
       const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
       if (!res.ok) return false;
       const j = await res.json();
@@ -703,6 +738,9 @@ function setStatus(text, color) {
 
 async function checkBackend() {
   try {
+    if (getMockEnabled && getMockEnabled()) {
+      try { const bins = await getBins(); return Array.isArray(bins); } catch (e) { return false; }
+    }
     const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/bins`, { method: 'GET', cache: 'no-store' });
     if (res.ok) return true;
   } catch (e) { /* ignore */ }
