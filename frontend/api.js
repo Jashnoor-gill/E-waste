@@ -195,4 +195,20 @@ export function getMockEnabled() {
 // Also expose helpers on `window` for compatibility with non-module scripts
 try { if (typeof window !== 'undefined') { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } } catch (e) {}
 
+// Ensure a sensible default for demo mode so pages load with mock data available.
+try {
+  if (typeof window !== 'undefined') {
+    // If localStorage has an explicit setting, respect it; otherwise default ON
+    const stored = (() => { try { return localStorage.getItem('ENABLE_MOCK'); } catch (e) { return null; } })();
+    if (stored === null) {
+      // set default true so the demo works out-of-the-box
+      window.setMockEnabled(true);
+      try { localStorage.setItem('ENABLE_MOCK', 'true'); } catch (e) {}
+    } else {
+      // apply stored preference
+      window.setMockEnabled(stored === 'true');
+    }
+  }
+} catch (e) { /* non-fatal */ }
+
 // Add more API calls as needed
