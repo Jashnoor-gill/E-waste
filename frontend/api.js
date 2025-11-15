@@ -6,7 +6,10 @@ const API_BASE = (typeof window !== 'undefined' && window.BACKEND_URL)
   ? `${window.BACKEND_URL.replace(/\/$/, '')}/api`
   : (typeof window !== 'undefined' ? '/api' : 'http://localhost:5000/api');
 
-// Mock mode removed: withMock and mock flags are no-ops. All requests go to real backend.
+// Mock helper: currently we keep requests pointed at the real backend, but
+// exposing `withMock` and `getMockEnabled` allows the site to enable/disable
+// lightweight mock behavior from the page (e.g. for demos). By default mock
+// mode is ON unless explicitly disabled via `window.ENABLE_MOCK = false`.
 function withMock(url) { return url; }
 
 // Import authFetch for authenticated requests (adds Authorization header)
@@ -123,7 +126,7 @@ export async function updateStats(data) {
 }
 
 // No-op mock API: keep API surface minimal for compatibility
-export function setMockEnabled(on) { /* no-op (mock removed) */ }
-export function getMockEnabled() { return false; }
+export function setMockEnabled(on) { try { if (typeof window !== 'undefined') window.ENABLE_MOCK = !!on; } catch (e) {} }
+export function getMockEnabled() { try { if (typeof window !== 'undefined') return window.ENABLE_MOCK !== false; } catch (e) {} return true; }
 
 // Add more API calls as needed

@@ -1,5 +1,5 @@
 import { io as ioClient } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
-import { getMockEnabled } from './api.js';
+import { getMockEnabled, setMockEnabled } from './api.js';
 
 // Connect to backend socket.io. Use the current page origin so local dev points to local backend
 const DEFAULT_BACKEND = 'https://e-waste-backend-3qxc.onrender.com';
@@ -30,6 +30,7 @@ function setupUi() {
   const startPiCameraBtn = document.getElementById('startPiCameraBtn');
   const stopPiCameraBtn = document.getElementById('stopPiCameraBtn');
   const piDeviceIdInput = document.getElementById('piDeviceIdInput');
+  const mockToggleBtn = document.getElementById('mockToggleBtn');
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
   if (runBtn) runBtn.addEventListener('click', requestRunModel);
@@ -48,6 +49,37 @@ function setupUi() {
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
   if (startPiCameraBtn) startPiCameraBtn.addEventListener('click', () => startPiCamera());
   if (stopPiCameraBtn) stopPiCameraBtn.addEventListener('click', () => stopPiCamera());
+  if (mockToggleBtn) {
+    // initialize mock state from localStorage (if present) or from api.getMockEnabled
+    try {
+      let enabled = true;
+      const stored = localStorage.getItem('ENABLE_MOCK');
+      if (stored !== null) enabled = stored === 'true';
+      else enabled = getMockEnabled();
+      setMockEnabled(enabled);
+    } catch (e) { try { setMockEnabled(getMockEnabled()); } catch(e){ } }
+
+    const updateMockToggleUI = () => {
+      try {
+        const on = !!getMockEnabled();
+        mockToggleBtn.textContent = on ? 'Mock: On' : 'Mock: Off';
+        mockToggleBtn.style.background = on ? '#e8f5e9' : '#fff3e0';
+        mockToggleBtn.style.borderColor = on ? '#c8e6c9' : '#ffecb3';
+      } catch (e) { /* ignore */ }
+    };
+
+    mockToggleBtn.addEventListener('click', (ev) => {
+      try {
+        const cur = !!getMockEnabled();
+        const next = !cur;
+        setMockEnabled(next);
+        try { localStorage.setItem('ENABLE_MOCK', next ? 'true' : 'false'); } catch (e) {}
+        updateMockToggleUI();
+      } catch (e) { console.warn('mock toggle failed', e); }
+    });
+    // reflect initial state
+    try { updateMockToggleUI(); } catch (e) {}
+  }
   // If browser does not support getUserMedia, disable webcam controls with a helpful title
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     const note = 'Camera unavailable (requires HTTPS or localhost and browser support)';
