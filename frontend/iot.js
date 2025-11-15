@@ -144,6 +144,8 @@ function setupUi() {
       console.warn('persistFrameToServer error', err);
     }
   }
+  // Expose frame persisting to top-level so other functions (webcam capture, run model) can reuse it
+  try { window.persistFrameToServer = persistFrameToServer; } catch (e) { /* ignore */ }
 
   socket.on('iot-model-result', (payload) => {
     console.log('Received iot-model-result', payload);
@@ -354,6 +356,12 @@ async function captureFromWebcam() {
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
   // store captured image and enable Run Model button
   lastCapturedB64 = b64;
+  // Persist the captured frame to the backend so it can be shown to other clients and via the Pi feed endpoints
+  try {
+    if (window.persistFrameToServer) {
+      window.persistFrameToServer('browser', b64).catch(e => console.warn('persistFrameToServer failed for webcam capture', e));
+    }
+  } catch (e) { /* ignore */ }
   try {
     const runBtn = document.getElementById('iotRunModelBtn');
     if (runBtn) runBtn.disabled = false;
@@ -393,8 +401,14 @@ async function oneClickCapture() {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
     const b64 = dataUrl.split(',')[1];
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
+    // Persist the captured image so it's available via the frame server for display
+    try {
+      if (window.persistFrameToServer) {
+        await window.persistFrameToServer('browser', b64);
+      }
+    } catch (e) { console.warn('persistFrameToServer failed in oneClickCapture', e); }
 
-  const body = { image_b64: b64, replySocketId: socket.id };
+    const body = { image_b64: b64, replySocketId: socket.id };
   // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
   const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
   const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
@@ -477,11 +491,15 @@ async function requestRunModel() {
     let body = { replySocketId: socket.id };
     // If there's a captured image from the webcam, send it explicitly.
     if (lastCapturedB64) {
-        // Instead of sending the image to the server (which would force server-side model run),
-        // prefer device-side model run. Send a run request for the configured device.
+        // Persist the captured image first so it is visible on the site, then request device-side model run.
+        try {
+          if (window.persistFrameToServer) {
+            await window.persistFrameToServer('browser', lastCapturedB64);
+          }
+        } catch (e) { console.warn('persistFrameToServer failed before runModel', e); }
         const deviceName2 = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
         body = { deviceName: deviceName2, replySocketId: socket.id };
-        // clear stored image after sending (we don't send it to server)
+        // clear stored image after uploading
         lastCapturedB64 = null;
         try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
     }
