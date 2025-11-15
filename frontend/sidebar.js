@@ -99,15 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (dashboardLink && dashboardLink.parentElement) menu.insertBefore(li2, dashboardLink.parentElement.nextSibling);
           else menu.appendChild(li2);
         }
-        // Ensure Profile link
-        if (!document.querySelector('#sidebar .sidebar-menu a[href*="profile"]')) {
-          const li3 = document.createElement('li');
-          li3.innerHTML = `<a href="profile.html"><span class="icon">👤</span> Profile</a>`;
-          // place profile near user-related links
-          const binLink = document.querySelector('#sidebar .sidebar-menu a[href*="bin-user"]');
-          if (binLink && binLink.parentElement) menu.insertBefore(li3, binLink.parentElement.nextSibling);
-          else menu.appendChild(li3);
-        }
+        // Profile link intentionally omitted per UX preference
 
         // Deduplicate Bin User links (keep first occurrence)
         try {
