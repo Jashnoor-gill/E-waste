@@ -189,7 +189,8 @@ body.no-scroll {
 body {
   margin: 0;
   font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-  background: linear-gradient(135deg, #e8f5e9 0%, #f4f6f8 100%);
+  /* Soft green background across the site */
+  background: linear-gradient(135deg, #eaf7ec 0%, #dff2df 100%);
   color: #1a2b2e;
   min-height: 100vh;
 }

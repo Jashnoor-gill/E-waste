@@ -10,8 +10,8 @@ section {
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  /* Use the bundled background image from assets/login-bg.jpeg */
-  background: url("assets/login-bg.jpeg") no-repeat;
+  /* Soft green background (removed image) */
+  background: linear-gradient(180deg, #eaf7ec 0%, #dff2df 100%);
   background-position: center;
   background-size: cover;
 }
