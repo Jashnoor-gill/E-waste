@@ -33,7 +33,10 @@ app.set('requestMap', requestMap);
 app.set('modelResults', modelResults);
 
 app.use(cors());
-app.use(express.json());
+// Increase JSON body size limit to allow larger base64 image uploads from the frontend.
+// Adjust as needed for your environment (e.g. '5mb', '10mb').
+app.use(express.json({ limit: process.env.EXPRESS_JSON_LIMIT || '10mb' }));
+app.use(express.urlencoded({ limit: process.env.EXPRESS_JSON_LIMIT || '10mb', extended: true }));
 
 // Serve frontend statically so dashboard works over HTTP
 const __filename = fileURLToPath(import.meta.url);
