@@ -116,7 +116,7 @@ function setupUi() {
         console.warn('Received iot-photo but payload does not look like a supported image; showing raw payload for debugging', payload);
         imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Received non-image payload (size ${imgB64.length} chars). Check device capture code.</div>`;
       } else {
-        imgContainer.innerHTML = `<img src="data:${mime};base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
+        imgContainer.innerHTML = `<img src="data:${mime};base64,${imgB64}" style="width:100%; max-width:640px; height:auto; border-radius:8px;"/>`;
         // If device id is provided, persist the received frame to the frame server
         try {
           const deviceId = payload.device || payload.device_id || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
