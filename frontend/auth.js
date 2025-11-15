@@ -14,7 +14,7 @@ async function requestJson(path, body) {
 
 export async function register(formEl) {
   const fd = new FormData(formEl);
-  const body = { name: fd.get('name'), email: fd.get('email'), password: fd.get('password') };
+  const body = { name: fd.get('name'), username: fd.get('username'), email: fd.get('email'), password: fd.get('password') };
   const r = await requestJson('/auth/register', body);
   if (r && r.token) {
     localStorage.setItem('ew_token', r.token);
@@ -25,7 +25,8 @@ export async function register(formEl) {
 
 export async function login(formEl) {
   const fd = new FormData(formEl);
-  const body = { email: fd.get('email'), password: fd.get('password') };
+  // Send username (or identifier) to the backend
+  const body = { username: fd.get('username'), password: fd.get('password') };
   const r = await requestJson('/auth/login', body);
   if (r && r.token) {
     localStorage.setItem('ew_token', r.token);

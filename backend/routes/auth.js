@@ -11,18 +11,23 @@ const TOKEN_EXPIRY = process.env.JWT_EXPIRY || '7d';
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
-    if (!email || !password || !name) return res.status(400).json({ error: 'name,email,password required' });
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
-    if (existing) return res.status(409).json({ error: 'email_taken' });
+    const { name, email, username, password, role } = req.body;
+    // Require username and password for registration. Email and name are optional.
+    if (!username || !password) return res.status(400).json({ error: 'username,password required' });
+    const uname = String(username).toLowerCase().trim();
+    // Check for existing username or email
+    const existing = await User.findOne({ $or: [{ username: uname }, ...(email ? [{ email: String(email).toLowerCase().trim() }] : [])] });
+    if (existing) return res.status(409).json({ error: 'username_or_email_taken' });
     const hashed = await bcrypt.hash(password, 10);
-    const u = new User({ name, email: email.toLowerCase().trim(), password: hashed, role: role || undefined });
+    const u = new User({ name: name || undefined, username: uname, email: email ? String(email).toLowerCase().trim() : undefined, password: hashed, role: role || undefined });
     await u.save();
     const token = jwt.sign({ sub: u._id.toString(), role: u.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-    const out = { id: u._id, name: u.name, email: u.email, role: u.role, points: u.points };
+    const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
     return res.json({ token, user: out });
   } catch (err) {
     console.error('auth.register error', err);
+    // handle duplicate key errors gracefully
+    if (err && err.code === 11000) return res.status(409).json({ error: 'duplicate_key' });
     return res.status(500).json({ error: 'server_error' });
   }
 });
@@ -30,14 +35,19 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'email,password required' });
-    const u = await User.findOne({ email: email.toLowerCase().trim() });
+    const { identifier, username, password } = req.body;
+    const pwd = password;
+    if ((!identifier && !username) || !pwd) return res.status(400).json({ error: 'identifier_or_username,password required' });
+    const id = identifier || username;
+    const q = { $or: [{ username: String(id).toLowerCase().trim() }] };
+    // if identifier looks like an email, search by email too
+    if (String(id).includes('@')) q.$or.push({ email: String(id).toLowerCase().trim() });
+    const u = await User.findOne(q);
     if (!u) return res.status(401).json({ error: 'invalid_credentials' });
-    const ok = await bcrypt.compare(password, u.password);
+    const ok = await bcrypt.compare(pwd, u.password);
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
     const token = jwt.sign({ sub: u._id.toString(), role: u.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-    const out = { id: u._id, name: u.name, email: u.email, role: u.role, points: u.points };
+    const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
     return res.json({ token, user: out });
   } catch (err) {
     console.error('auth.login error', err);

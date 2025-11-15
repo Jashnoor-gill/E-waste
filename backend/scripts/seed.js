@@ -26,16 +26,16 @@ async function seed() {
 
     // Create sample users
     const users = [
-      { name: 'Alice Admin', email: 'admin@example.com', password: 'password123', role: 'admin' },
-      { name: 'Bin User', email: 'user@example.com', password: 'password123', role: 'binuser' },
-      { name: 'Collector Carl', email: 'collector@example.com', password: 'password123', role: 'collector' }
+      { name: 'Alice Admin', username: 'admin', email: 'admin@example.com', password: 'password123', role: 'admin' },
+      { name: 'Bin User', username: 'binuser', email: 'user@example.com', password: 'password123', role: 'binuser' },
+      { name: 'Collector Carl', username: 'collector', email: 'collector@example.com', password: 'password123', role: 'collector' }
     ];
 
     for (const u of users) {
       const hashed = await bcrypt.hash(u.password, 10);
-      const doc = new User({ name: u.name, email: u.email.toLowerCase(), password: hashed, role: u.role });
+      const doc = new User({ name: u.name, username: u.username, email: u.email.toLowerCase(), password: hashed, role: u.role });
       await doc.save();
-      console.log('Created user', doc.email, 'role', doc.role);
+      console.log('Created user', doc.username || doc.email, 'role', doc.role);
     }
 
     // Create a single stats document
