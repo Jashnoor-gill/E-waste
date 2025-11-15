@@ -302,6 +302,55 @@ const VIDEO_ID = 'webcamVideo';
 let lastCapturedB64 = null; // store last captured image for explicit run
 let _webcamCaptureInFlight = false;
 
+// Compress a canvas to a JPEG dataURL, reducing quality and dimensions
+// until the resulting base64 payload is under `maxChars` or until
+// minimum quality/width is reached. Returns a dataURL string.
+async function compressCanvasToDataUrl(origCanvas, maxChars, startQuality = 0.6) {
+  const startWidth = origCanvas.width;
+  const startHeight = origCanvas.height;
+  const minQuality = 0.4;
+  const minWidth = 240;
+  let quality = startQuality;
+  let width = startWidth;
+  let height = startHeight;
+
+  while (true) {
+    const tmp = document.createElement('canvas');
+    tmp.width = width;
+    // preserve aspect ratio
+    tmp.height = Math.round((width / startWidth) * startHeight);
+    const ctx = tmp.getContext('2d');
+    ctx.drawImage(origCanvas, 0, 0, tmp.width, tmp.height);
+    let dataUrl;
+    try {
+      dataUrl = tmp.toDataURL('image/jpeg', quality);
+    } catch (e) {
+      // fallback to default encoding if error
+      dataUrl = tmp.toDataURL('image/jpeg');
+    }
+    const b64 = dataUrl.split(',')[1] || '';
+    if (!maxChars || b64.length <= maxChars) return dataUrl;
+
+    // try decreasing quality first
+    if (quality > minQuality + 0.001) {
+      quality = Math.max(minQuality, quality - 0.1);
+      // try again with smaller quality
+      continue;
+    }
+
+    // then decrease width
+    if (width > minWidth + 10) {
+      width = Math.max(minWidth, Math.round(width * 0.8));
+      // reset quality to startQuality when reducing dimensions
+      quality = startQuality;
+      continue;
+    }
+
+    // cannot reduce further, return current
+    return dataUrl;
+  }
+}
+
 async function startWebcam() {
   try {
     const v = document.getElementById(VIDEO_ID);
@@ -355,7 +404,9 @@ async function captureFromWebcam() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
   // convert to JPEG base64 with reduced quality to avoid large payloads
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+  // Use a max payload size (in base64 chars) to avoid 413s; allow override via window.FRAME_MAX_CHARS
+  const MAX_CHARS = (typeof window !== 'undefined' && window.FRAME_MAX_CHARS) ? window.FRAME_MAX_CHARS : 700000;
+  const dataUrl = await compressCanvasToDataUrl(canvas, MAX_CHARS, 0.6);
   const b64 = dataUrl.split(',')[1];
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
   // store captured image and enable Run Model button
@@ -407,7 +458,8 @@ async function oneClickCapture() {
     canvas.height = Math.round(origH * scale);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const MAX_CHARS = (typeof window !== 'undefined' && window.FRAME_MAX_CHARS) ? window.FRAME_MAX_CHARS : 700000;
+    const dataUrl = await compressCanvasToDataUrl(canvas, MAX_CHARS, 0.6);
     const b64 = dataUrl.split(',')[1];
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
     // Persist the captured image so it's available via the frame server for display
