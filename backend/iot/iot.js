@@ -25,7 +25,6 @@ router.post('/capture', async (req, res) => {
     if (!first.done) targetSocketId = first.value[1];
   }
 
-  if (!targetSocketId) return res.status(503).json({ error: 'No IoT device connected' });
   // If no device connected, allow a simulated response for local testing.
   // Set env SKIP_DEVICE_FORWARDING=true to enable simulation (default: true for easier local testing).
   const skipDevice = (process.env.SKIP_DEVICE_FORWARDING || 'true').toLowerCase() === 'true';
