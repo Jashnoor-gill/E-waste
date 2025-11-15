@@ -99,21 +99,24 @@ function setupUi() {
     // Accept multiple possible keys from various Pi/client implementations
     const imgB64 = payload && (payload.imageBase64 || payload.image_b64 || payload.image || payload.frame || payload.img);
     if (imgContainer && imgB64) {
-      // Basic validation: ensure base64 decodes and starts with JPEG magic bytes (0xFF,0xD8)
-      let looksLikeJpeg = false;
+      // Basic validation: try to detect common image formats by magic bytes (JPEG or PNG)
+      let mime = null;
       try {
         const sample = atob(imgB64.slice(0, 40));
         const b0 = sample.charCodeAt(0);
         const b1 = sample.charCodeAt(1);
-        looksLikeJpeg = (b0 === 0xFF && b1 === 0xD8);
-      } catch (e) {
-        looksLikeJpeg = false;
-      }
-      if (!looksLikeJpeg) {
-        console.warn('Received iot-photo but payload does not look like a JPEG image; showing raw payload for debugging', payload);
-        imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Received non-JPEG payload (size ${imgB64.length} chars). Check device capture code.</div>`;
+        const b2 = sample.charCodeAt(2);
+        const b3 = sample.charCodeAt(3);
+        // JPEG magic bytes: 0xFF 0xD8
+        if (b0 === 0xFF && b1 === 0xD8) mime = 'image/jpeg';
+        // PNG magic bytes: 0x89 0x50 0x4E 0x47
+        else if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4E && b3 === 0x47) mime = 'image/png';
+      } catch (e) { mime = null; }
+      if (!mime) {
+        console.warn('Received iot-photo but payload does not look like a supported image; showing raw payload for debugging', payload);
+        imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Received non-image payload (size ${imgB64.length} chars). Check device capture code.</div>`;
       } else {
-        imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
+        imgContainer.innerHTML = `<img src="data:${mime};base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
         // If device id is provided, persist the received frame to the frame server
         try {
           const deviceId = payload.device || payload.device_id || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
