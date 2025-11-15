@@ -195,20 +195,26 @@ export function getMockEnabled() {
 // Also expose helpers on `window` for compatibility with non-module scripts
 try { if (typeof window !== 'undefined') { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } } catch (e) {}
 
-// Ensure a sensible default for demo mode so pages load with mock data available.
+// Initialize mock mode default ON when this module loads so non-module pages
+// that import or call `window.getMockEnabled()` get a consistent default.
 try {
   if (typeof window !== 'undefined') {
-    // If localStorage has an explicit setting, respect it; otherwise default ON
-    const stored = (() => { try { return localStorage.getItem('ENABLE_MOCK'); } catch (e) { return null; } })();
-    if (stored === null) {
-      // set default true so the demo works out-of-the-box
-      window.setMockEnabled(true);
-      try { localStorage.setItem('ENABLE_MOCK', 'true'); } catch (e) {}
-    } else {
-      // apply stored preference
-      window.setMockEnabled(stored === 'true');
+    // If localStorage contains an explicit choice, respect it. Otherwise default ON.
+    try {
+      const stored = localStorage.getItem('ENABLE_MOCK');
+      if (stored === 'true') window.ENABLE_MOCK = true;
+      else if (stored === 'false') window.ENABLE_MOCK = false;
+      else if (typeof window.ENABLE_MOCK === 'undefined') {
+        window.ENABLE_MOCK = true;
+        try { localStorage.setItem('ENABLE_MOCK', 'true'); } catch (e) {}
+      }
+    } catch (e) {
+      if (typeof window.ENABLE_MOCK === 'undefined') window.ENABLE_MOCK = true;
     }
+    // expose after initialization
+    try { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('mock-mode-changed', { detail: { enabled: !!window.ENABLE_MOCK } })); } catch (e) {}
   }
-} catch (e) { /* non-fatal */ }
+} catch (e) { /* ignore */ }
 
 // Add more API calls as needed
