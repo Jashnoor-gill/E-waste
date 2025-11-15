@@ -126,7 +126,25 @@ export async function updateStats(data) {
 }
 
 // No-op mock API: keep API surface minimal for compatibility
-export function setMockEnabled(on) { try { if (typeof window !== 'undefined') window.ENABLE_MOCK = !!on; } catch (e) {} }
-export function getMockEnabled() { try { if (typeof window !== 'undefined') return window.ENABLE_MOCK !== false; } catch (e) {} return true; }
+export function setMockEnabled(on) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.ENABLE_MOCK = !!on;
+      // expose global helpers for non-module scripts (sidebar.js, inline scripts)
+      try { window.setMockEnabled = setMockEnabled; } catch (e) {}
+      try { window.getMockEnabled = getMockEnabled; } catch (e) {}
+      // dispatch a site-wide event so other scripts can react
+      try { window.dispatchEvent(new CustomEvent('mock-mode-changed', { detail: { enabled: !!on } })); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+export function getMockEnabled() {
+  try { if (typeof window !== 'undefined') return window.ENABLE_MOCK !== false; } catch (e) {}
+  return true;
+}
+
+// Also expose helpers on `window` for compatibility with non-module scripts
+try { if (typeof window !== 'undefined') { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } } catch (e) {}
 
 // Add more API calls as needed

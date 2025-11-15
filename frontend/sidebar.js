@@ -121,6 +121,51 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const header = document.querySelector('#sidebar .sidebar-header');
     if (header) {
+      // Add a small mock-mode toggle next to the header so it's available on every page
+      try {
+        const mockWrap = document.createElement('div');
+        mockWrap.style.display = 'flex';
+        mockWrap.style.alignItems = 'center';
+        mockWrap.style.gap = '8px';
+        mockWrap.style.marginLeft = '8px';
+        mockWrap.id = 'sidebarMockWrap';
+        mockWrap.innerHTML = `<button id="sidebarMockToggle" style="padding:6px 8px;border-radius:6px;border:1px solid #ddd;background:#e8f5e9;color:#064">Mock: On</button>`;
+        header.appendChild(mockWrap);
+        const mockBtn = mockWrap.querySelector('#sidebarMockToggle');
+        function updateMockUI(enabled) {
+          try {
+            if (!mockBtn) return;
+            mockBtn.textContent = enabled ? 'Mock: On' : 'Mock: Off';
+            mockBtn.style.background = enabled ? '#e8f5e9' : '#fff3e0';
+            mockBtn.style.borderColor = enabled ? '#c8e6c9' : '#ffecb3';
+            mockBtn.style.color = enabled ? '#064' : '#a65a00';
+          } catch (e) {}
+        }
+        // Initialize from localStorage or global getter
+        try {
+          let enabled = true;
+          const stored = localStorage.getItem('ENABLE_MOCK');
+          if (stored !== null) enabled = stored === 'true';
+          else if (window.getMockEnabled) enabled = !!window.getMockEnabled();
+          // set global state and update UI
+          try { if (window.setMockEnabled) window.setMockEnabled(enabled); else window.ENABLE_MOCK = enabled; } catch (e) {}
+          updateMockUI(enabled);
+        } catch (e) { console.warn('init sidebar mock toggle failed', e); }
+
+        mockBtn.addEventListener('click', () => {
+          try {
+            const cur = (window.getMockEnabled ? !!window.getMockEnabled() : (window.ENABLE_MOCK !== false));
+            const next = !cur;
+            try { if (window.setMockEnabled) window.setMockEnabled(next); else window.ENABLE_MOCK = next; } catch (e) {}
+            try { localStorage.setItem('ENABLE_MOCK', next ? 'true' : 'false'); } catch (e) {}
+            updateMockUI(next);
+          } catch (e) { console.warn('sidebar mock toggle click failed', e); }
+        });
+
+        // Listen for global changes from other toggles
+        try { window.addEventListener && window.addEventListener('mock-mode-changed', (ev) => updateMockUI(!!(ev && ev.detail && ev.detail.enabled))); } catch (e) {}
+      } catch (e) { console.warn('failed to add sidebar mock toggle', e); }
+      
       const userPanel = document.createElement('div');
       userPanel.id = 'sidebarUserPanel';
       userPanel.style.marginTop = '8px';
