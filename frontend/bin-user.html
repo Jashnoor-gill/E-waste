@@ -29,17 +29,13 @@
 
   <!-- IoT / Camera control panel (Bin User) -->
   <section id="iotPanel" class="iot-panel" style="padding:1rem; max-width:1100px; margin:1rem auto">
-    <h2>📷 Test Camera & Model</h2>
     <div class="iot-controls" style="margin-top:0.5rem">
       <video id="webcamVideo" autoplay playsinline style="display:none; width:100%; max-width:640px; border-radius:8px; background:#000"></video>
       <div style="display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap">
         <button id="webcamStartBtn" class="btn">Start Camera</button>
         <button id="webcamStopBtn" class="btn">Stop Camera</button>
         <button id="webcamCaptureBtn" class="btn">Capture</button>
-        <button id="iotRunModelBtn" class="btn">Run Model</button>
         <button id="webcamOneClickBtn" class="btn">One-click Capture & Run</button>
-        <button id="iotCaptureBtn" class="btn">Request Device Capture</button>
-        <button id="testCameraBtn" class="btn">Test Camera & Model</button>
       </div>
 
       <div style="display:flex; gap:1rem; margin-top:1rem; align-items:flex-start; flex-wrap:wrap">
@@ -47,18 +43,20 @@
         <div id="iotModelResult" style="flex:1; min-width:220px"></div>
       </div>
 
-      <!-- Remote Pi camera feed -->
+      <!-- Pi camera feed -->
       <div id="remoteFeedSection" style="margin-top:1rem">
-        <h3>Remote Pi Camera</h3>
+        <h3>Pi Camera</h3>
         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap">
           <button id="startPiFeedBtn" class="btn">Start Pi Feed</button>
           <button id="stopPiFeedBtn" class="btn">Stop Pi Feed</button>
           <button id="startPiCameraBtn" class="btn">Start Pi Camera</button>
           <button id="stopPiCameraBtn" class="btn">Stop Pi Camera</button>
+          <button id="iotRunModelBtn" class="btn">Run Model</button>
+          <button id="iotCaptureBtn" class="btn">Device Capture</button>
           <label style="margin-left:0.5rem">Device ID: <input id="piDeviceIdInput" value="raspi-1" style="padding:0.25rem;" /></label>
         </div>
         <div id="remoteFrameContainer" style="margin-top:0.75rem;">
-          <img id="remoteFrameImg" alt="Remote Pi Feed" style="max-width:100%; border-radius:8px; display:none; background:#000" />
+          <img id="remoteFrameImg" alt="Pi Camera Feed" style="max-width:100%; border-radius:8px; display:none; background:#000" />
         </div>
       </div>
 
