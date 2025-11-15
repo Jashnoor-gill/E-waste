@@ -185,18 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
       header.appendChild(userPanel);
 
       const token = localStorage.getItem('ew_token');
-      if (token) {
-        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).then(user => {
-          if (user) {
-            const name = user.username || user.name || user.email || 'User';
-            document.getElementById('sidebarUserName').textContent = name;
-            document.getElementById('sidebarUserRole').textContent = user.role || '';
-            // avatar initial
-            const av = document.getElementById('sidebarAvatar');
-            av.textContent = (user.username ? user.username[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : 'U'));
-          }
-        }).catch(()=>{/* ignore */});
-      }
+      // If mock/demo mode enabled and no token present, show a demo user
+      try {
+        const mockEnabled = (window.getMockEnabled ? !!window.getMockEnabled() : (window.ENABLE_MOCK !== false));
+        if (!token && mockEnabled) {
+          document.getElementById('sidebarUserName').textContent = 'Demo User';
+          document.getElementById('sidebarUserRole').textContent = 'demo';
+          const av = document.getElementById('sidebarAvatar'); av.textContent = 'D';
+        } else if (token) {
+          fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).then(user => {
+            if (user) {
+              const name = user.username || user.name || user.email || 'User';
+              document.getElementById('sidebarUserName').textContent = name;
+              document.getElementById('sidebarUserRole').textContent = user.role || '';
+              // avatar initial
+              const av = document.getElementById('sidebarAvatar');
+              av.textContent = (user.username ? user.username[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : 'U'));
+            }
+          }).catch(()=>{/* ignore */});
+        }
+      } catch (e) { /* ignore */ }
 
       document.getElementById('sidebarLogoutBtn').addEventListener('click', () => {
         localStorage.removeItem('ew_token');

@@ -171,6 +171,11 @@ function setupUi() {
   async function persistFrameToServer(deviceId, base64Frame) {
     if (!deviceId || !base64Frame) return;
     try {
+      // If in mock mode, store the latest frame locally and skip network
+      if (getMockEnabled && getMockEnabled()) {
+        try { localStorage.setItem(`mock_latest_frame_${deviceId}`, base64Frame); } catch (e) {}
+        return;
+      }
       const url = `${ORIGIN.replace(/\/$/, '')}/api/frame/upload_frame`;
       const body = { device_id: deviceId, frame: base64Frame };
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -563,12 +568,29 @@ function renderModelResult(result) {
 
 async function requestCapture() {
   try {
+    // If mock mode enabled, simulate a device capture locally
+    if (getMockEnabled && getMockEnabled()) {
+      showCaptureLoading(true);
+      // Create a simple SVG placeholder and base64-encode it
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><rect width='100%' height='100%' fill='#e8f5e9'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#1a7f37' font-size='18'>Mock Camera\nraspi-1</text></svg>`;
+      const b64 = btoa(svg);
+      const payload = { image_b64: b64, device: (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1' };
+      // render similarly to incoming socket event
+      try {
+        const imgContainer = document.getElementById('iotImageContainer');
+        if (imgContainer) imgContainer.innerHTML = `<img src="data:image/svg+xml;base64,${b64}" style="width:100%; max-width:640px; height:auto; border-radius:8px;"/>`;
+        try { persistFrameToServer(payload.device, b64).catch(()=>{}); } catch(e){}
+      } catch (e) { console.warn('mock capture render failed', e); }
+      showCaptureLoading(false);
+      _piCaptureInFlight = false;
+      return;
+    }
     // include our socket id so server can route the response only to us
     const body = { replySocketId: socket.id };
     // show a simple loading state
     showCaptureLoading(true);
-  const captureUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/capture`;
-  const res = await fetch(captureUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const captureUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/capture`;
+    const res = await fetch(captureUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
       throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
@@ -587,7 +609,19 @@ async function requestCapture() {
 async function requestRunModel() {
   try {
     showModelLoading(true);
-  const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    // If mock enabled, synthesize a model result locally
+    if (getMockEnabled && getMockEnabled()) {
+      // choose a random category from our demo set
+      const cats = ['mobile','pcb','cable','charger','headphones'];
+      const pick = cats[Math.floor(Math.random()*cats.length)];
+      const confidence = Math.random() * 0.4 + 0.6; // 60-100%
+      // small delay to simulate processing
+      await new Promise(r => setTimeout(r, 600 + Math.floor(Math.random()*800)));
+      renderModelResult({ label: pick, confidence, source: 'mock' });
+      showModelLoading(false);
+      return;
+    }
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
     let body = { replySocketId: socket.id };
     // If there's a captured image from the webcam, send it explicitly.
     if (lastCapturedB64) {

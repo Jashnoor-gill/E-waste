@@ -16,16 +16,53 @@ function withMock(url) { return url; }
 import { authFetch } from './auth.js';
 
 export async function getBins() {
+  if (getMockEnabled()) {
+    // lightweight mock bins containing various e-waste item types
+    return Promise.resolve([
+      { id: 'bin-1', name: 'Electronics Drop 1', location: 'Library', items: ['mobile', 'charger', 'headphones'], capacityKg: 50, fillKg: 12.4 },
+      { id: 'bin-2', name: 'Lab Bin A', location: 'Lab Block', items: ['pcb', 'cable', 'charger'], capacityKg: 80, fillKg: 36.2 },
+      { id: 'bin-3', name: 'Hostel Bin', location: 'Hostel 3', items: ['mobile', 'cable'], capacityKg: 60, fillKg: 8.1 },
+      { id: 'bin-4', name: 'Office Bin', location: 'Admin Office', items: ['pc', 'charger', 'headphones'], capacityKg: 40, fillKg: 21.0 }
+    ]);
+  }
   const res = await fetch(withMock(`${API_BASE}/bins`));
   return res.json();
 }
 
 export async function getStats() {
+  if (getMockEnabled()) {
+    // Mock stats and chart-ready series for dashboard
+    return Promise.resolve({
+      totalEwasteKg: 128.7,
+      totalEvents: 342,
+      co2SavedKg: 320.5,
+      byCategory: {
+        mobile: 34.2,
+        pcb: 22.5,
+        cable: 18.0,
+        charger: 27.0,
+        headphones: 11.0,
+        other: 16.0
+      },
+      chartSeries: {
+        labels: ['Mobile','PCB','Cable','Charger','Headphones','Other'],
+        data: [34.2,22.5,18.0,27.0,11.0,16.0]
+      }
+    });
+  }
   const res = await fetch(withMock(`${API_BASE}/stats`));
   return res.json();
 }
 
 export async function getEvents() {
+  if (getMockEnabled()) {
+    const now = new Date();
+    return Promise.resolve([
+      { id: 'ev-1', user: 'demo_user', binId: 'bin-1', category: 'mobile', weightKg: 0.2, timestamp: new Date(now.getTime() - 1000*60*60).toISOString() },
+      { id: 'ev-2', user: 'demo_user', binId: 'bin-2', category: 'pcb', weightKg: 1.2, timestamp: new Date(now.getTime() - 1000*60*30).toISOString() },
+      { id: 'ev-3', user: 'demo_user', binId: 'bin-3', category: 'cable', weightKg: 0.15, timestamp: new Date(now.getTime() - 1000*60*10).toISOString() }
+    ]);
+  }
   const res = await fetch(withMock(`${API_BASE}/events`));
   return res.json();
 }
@@ -45,12 +82,23 @@ export async function postEvent(eventData) {
 }
 
 export async function getUsers() {
+  if (getMockEnabled()) {
+    return Promise.resolve([
+      { id: 'u-demo', username: 'demo_user', name: 'Demo User', role: 'user' },
+      { id: 'u-admin', username: 'admin', name: 'Administrator', role: 'admin' }
+    ]);
+  }
   const res = await fetch(withMock(`${API_BASE}/users`));
   return res.json();
 }
 
 // Device management API (admin)
 export async function getDevices(adminToken) {
+  if (getMockEnabled()) {
+    return Promise.resolve([
+      { id: 'raspi-1', name: 'raspi-1', lastSeen: new Date().toISOString(), status: 'online' }
+    ]);
+  }
   const res = await fetch(`${API_BASE}/device-mgmt/devices`, { headers: { 'x-admin-token': adminToken } });
   return res.json();
 }
