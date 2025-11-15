@@ -300,6 +300,7 @@ try { window.startPiCamera = startPiCamera; window.stopPiCamera = stopPiCamera; 
 let _webcamStream = null;
 const VIDEO_ID = 'webcamVideo';
 let lastCapturedB64 = null; // store last captured image for explicit run
+let _webcamCaptureInFlight = false;
 
 async function startWebcam() {
   try {
@@ -335,6 +336,8 @@ function stopWebcam() {
 
 async function captureFromWebcam() {
   if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
+  if (_webcamCaptureInFlight) return; // prevent duplicate captures
+  _webcamCaptureInFlight = true;
   const v = document.getElementById(VIDEO_ID);
   const imgContainer = document.getElementById('iotImageContainer');
   if (!v || !v.srcObject) return alert('Camera not started');
@@ -368,11 +371,14 @@ async function captureFromWebcam() {
   } catch (e) { /* ignore */ }
   // Stop the webcam after capture so the camera doesn't stay running
   try { stopWebcam(); } catch (e) { /* ignore */ }
+  _webcamCaptureInFlight = false;
 }
 
 // One-click flow: start camera, capture one frame, send it, then stop camera.
 async function oneClickCapture() {
   if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
+  if (_webcamCaptureInFlight) return;
+  _webcamCaptureInFlight = true;
   const v = document.getElementById(VIDEO_ID);
   const imgContainer = document.getElementById('iotImageContainer');
   try {
@@ -442,6 +448,7 @@ async function oneClickCapture() {
         v2.srcObject = null;
       }
     } catch (e) { /* ignore */ }
+    _webcamCaptureInFlight = false;
   }
 }
 
