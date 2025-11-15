@@ -41,6 +41,16 @@ router.post('/model_result', async (req, res) => {
     const modelResults = req.app.get('modelResults');
     if (modelResults) modelResults.set(String(deviceId), { ts: Date.now(), payload: result });
 
+    // Emit the model result to connected clients via socket.io so the web UI updates in real-time
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('iot-model-result', { device_id: deviceId, result });
+      }
+    } catch (e) {
+      console.warn('Failed to emit iot-model-result via socket.io', e);
+    }
+
     // If result contains a weight/amount, create a deposit event and update stats
     const weight = (result.weight !== undefined) ? Number(result.weight) : (result.amount !== undefined ? Number(result.amount) : null);
     const label = result.label || result.category || 'unknown';
