@@ -344,7 +344,8 @@ async function captureFromWebcam() {
   // Capture frame and show it, but do not run the model automatically.
   showModelLoading(false);
   // draw current frame to canvas (resize to limit payload)
-  const MAX_WIDTH = 800;
+  // Use smaller defaults to avoid sending very large base64 payloads that can trigger 413 errors
+  const MAX_WIDTH = 600;
   const origW = v.videoWidth || 1280;
   const origH = v.videoHeight || 720;
   const scale = Math.min(1, MAX_WIDTH / origW);
@@ -354,7 +355,7 @@ async function captureFromWebcam() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
   // convert to JPEG base64 with reduced quality to avoid large payloads
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
   const b64 = dataUrl.split(',')[1];
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
   // store captured image and enable Run Model button
@@ -396,8 +397,8 @@ async function oneClickCapture() {
       await new Promise(r => setTimeout(r, 250));
     }
 
-    // draw frame
-    const MAX_WIDTH = 800;
+    // draw frame (use smaller defaults to avoid large payloads)
+    const MAX_WIDTH = 600;
     const origW = v.videoWidth || 1280;
     const origH = v.videoHeight || 720;
     const scale = Math.min(1, MAX_WIDTH / origW);
@@ -406,7 +407,7 @@ async function oneClickCapture() {
     canvas.height = Math.round(origH * scale);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
     const b64 = dataUrl.split(',')[1];
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
     // Persist the captured image so it's available via the frame server for display
