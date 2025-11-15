@@ -18,8 +18,8 @@ section {
 
 .form-box {
   position: relative;
-  width: min(400px, 92vw);
-  max-width: 400px;
+  width: min(420px, 92vw);
+  max-width: 420px;
   height: auto;
   padding: 2rem 1.25rem;
   background: transparent;
@@ -38,20 +38,20 @@ h2 {
 }
 
 /* Responsive adjustments */
-@media (max-width: 480px) {
-  section { padding: 2rem 0; }
+@media (max-width: 600px) {
+  section { padding: 1.25rem 0; }
   .form-box {
     width: calc(100% - 32px);
     margin: 0 16px;
     border-radius: 14px;
-    padding: 1.25rem;
+    padding: 1rem 0.9rem;
   }
-  h2 { font-size: 1.5rem; }
-  .inputbox { margin: 18px 0; width: 100%; }
-  .inputbox input { height: 44px; font-size: 0.95rem; }
+  h2 { font-size: 1.4rem; }
+  .inputbox { margin: 14px 0; width: 100%; }
+  .inputbox input { height: 46px; font-size: 0.98rem; }
   .inputbox ion-icon { top: 14px; font-size: 1.05rem; }
-  button { height: 44px; font-size: 0.95rem; }
-  .register { margin: 18px 0 8px; font-size: 0.9rem; }
+  button { height: 48px; font-size: 1rem; }
+  .register { margin: 14px 0 8px; font-size: 0.95rem; }
 }
 
 @media (max-width: 360px) {
@@ -62,9 +62,9 @@ h2 {
 
 .inputbox {
   position: relative;
-  margin: 30px 0;
-  width: 310px;
-  border-bottom: 2px solid #fff;
+  margin: 20px 0;
+  width: 100%;
+  border-bottom: 2px solid rgba(255,255,255,0.9);
 }
 
 .inputbox label {
@@ -87,12 +87,12 @@ input:valid ~ label {
 
 .inputbox input {
   width: 100%;
-  height: 50px;
+  height: 48px;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 1em;
-  padding: 0 35px 0 5px;
+  font-size: 1rem;
+  padding: 0 40px 0 8px;
   color: #fff;
 }
 
@@ -101,7 +101,7 @@ input:valid ~ label {
   right: 8px;
   color: #fff;
   font-size: 1.2em;
-  top: 20px;
+  top: 18px;
 }
 
 .forget {
@@ -136,14 +136,15 @@ input:valid ~ label {
 
 button {
   width: 100%;
-  height: 40px;
-  border-radius: 40px;
+  height: 48px;
+  border-radius: 999px;
   background: #fff;
   border: none;
   outline: none;
   cursor: pointer;
-  font-size: 1em;
+  font-size: 1rem;
   font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
 
 .register {
