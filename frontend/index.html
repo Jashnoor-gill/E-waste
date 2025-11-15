@@ -65,6 +65,19 @@
   <!-- Load dashboard as an ES module so imports work -->
   <script type="module" src="dashboard.js"></script>
   <script>
+    // If the user has not logged in before, redirect to the login page.
+    // This enforces showing the login/register form first on the deployed site.
+    (function(){
+      try {
+        const token = localStorage.getItem('ew_token');
+        if (!token) {
+          // Redirect to login page
+          window.location.replace('login.html');
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+  <script>
     // Disable local webcam by default on deployed site pages that load iot.js
     window.DISABLE_LOCAL_WEBCAM = true;
   </script>

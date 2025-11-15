@@ -99,12 +99,28 @@ function setupUi() {
     // Accept multiple possible keys from various Pi/client implementations
     const imgB64 = payload && (payload.imageBase64 || payload.image_b64 || payload.image || payload.frame || payload.img);
     if (imgContainer && imgB64) {
-      imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
-      // If device id is provided, persist the received frame to the frame server
+      // Basic validation: ensure base64 decodes and starts with JPEG magic bytes (0xFF,0xD8)
+      let looksLikeJpeg = false;
       try {
-        const deviceId = payload.device || payload.device_id || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
-        persistFrameToServer(deviceId, imgB64).catch((e) => console.warn('persistFrameToServer failed', e));
-      } catch (e) { /* ignore */ }
+        const sample = atob(imgB64.slice(0, 40));
+        const b0 = sample.charCodeAt(0);
+        const b1 = sample.charCodeAt(1);
+        looksLikeJpeg = (b0 === 0xFF && b1 === 0xD8);
+      } catch (e) {
+        looksLikeJpeg = false;
+      }
+      if (!looksLikeJpeg) {
+        console.warn('Received iot-photo but payload does not look like a JPEG image; showing raw payload for debugging', payload);
+        imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Received non-JPEG payload (size ${imgB64.length} chars). Check device capture code.</div>`;
+      } else {
+        imgContainer.innerHTML = `<img src="data:image/jpeg;base64,${imgB64}" style="max-width:100%; border-radius:8px;"/>`;
+        // If device id is provided, persist the received frame to the frame server
+        try {
+          const deviceId = payload.device || payload.device_id || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
+          console.log('persistFrameToServer: device=', deviceId, 'frameLen=', imgB64.length);
+          persistFrameToServer(deviceId, imgB64).catch((e) => console.warn('persistFrameToServer failed', e));
+        } catch (e) { /* ignore */ }
+      }
     } else if (imgContainer && payload && payload.error) {
       imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Capture error: ${payload.error}</div>`;
     }

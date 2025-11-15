@@ -1,11 +1,16 @@
 // Simple API utility for frontend (mobile/LAN friendly)
 // Prefer a runtime-configured backend (window.BACKEND_URL) when available.
+// Default to local relative `/api` when no BACKEND_URL is provided so the
+// frontend works when served by the backend in development.
 const API_BASE = (typeof window !== 'undefined' && window.BACKEND_URL)
   ? `${window.BACKEND_URL.replace(/\/$/, '')}/api`
-  : 'https://e-waste-backend-3qxc.onrender.com/api';
+  : (typeof window !== 'undefined' ? '/api' : 'http://localhost:5000/api');
 
 // Mock mode removed: withMock and mock flags are no-ops. All requests go to real backend.
 function withMock(url) { return url; }
+
+// Import authFetch for authenticated requests (adds Authorization header)
+import { authFetch } from './auth.js';
 
 export async function getBins() {
   const res = await fetch(withMock(`${API_BASE}/bins`));
@@ -23,7 +28,8 @@ export async function getEvents() {
 }
 
 export async function postEvent(eventData) {
-  const res = await fetch(withMock(`${API_BASE}/events`), {
+  // Use authFetch so events are tied to authenticated user when token present
+  const res = await authFetch(withMock(`${API_BASE}/events`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(eventData)

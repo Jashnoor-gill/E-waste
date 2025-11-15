@@ -59,6 +59,9 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
+// Export middleware so other route files can protect endpoints
+export { requireAuth };
+
 // Returns current user info (protected)
 router.get('/me', requireAuth, async (req, res) => {
   try {
