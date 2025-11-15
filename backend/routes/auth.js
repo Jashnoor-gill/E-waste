@@ -42,8 +42,29 @@ router.post('/login', async (req, res) => {
     const q = { $or: [{ username: String(id).toLowerCase().trim() }] };
     // if identifier looks like an email, search by email too
     if (String(id).includes('@')) q.$or.push({ email: String(id).toLowerCase().trim() });
-    const u = await User.findOne(q);
-    if (!u) return res.status(401).json({ error: 'invalid_credentials' });
+    let u = await User.findOne(q);
+    // If user does not exist, auto-create (username-first flow)
+    if (!u) {
+      try {
+        const uname = String(id).toLowerCase().trim();
+        const hashed = await bcrypt.hash(pwd, 10);
+        const created = new User({ username: uname, password: hashed, role: 'binuser' });
+        await created.save();
+        const token = jwt.sign({ sub: created._id.toString(), role: created.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+        const out = { id: created._id, name: created.name, username: created.username, email: created.email, role: created.role, points: created.points };
+        return res.json({ token, user: out });
+      } catch (err) {
+        // possible duplicate key if created concurrently
+        if (err && err.code === 11000) {
+          u = await User.findOne(q);
+          if (!u) return res.status(500).json({ error: 'server_error' });
+        } else {
+          console.error('auth.login create user error', err);
+          return res.status(500).json({ error: 'server_error' });
+        }
+      }
+    }
+
     const ok = await bcrypt.compare(pwd, u.password);
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
     const token = jwt.sign({ sub: u._id.toString(), role: u.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
