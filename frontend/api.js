@@ -174,47 +174,7 @@ export async function updateStats(data) {
 }
 
 // No-op mock API: keep API surface minimal for compatibility
-export function setMockEnabled(on) {
-  try {
-    if (typeof window !== 'undefined') {
-      window.ENABLE_MOCK = !!on;
-      // expose global helpers for non-module scripts (sidebar.js, inline scripts)
-      try { window.setMockEnabled = setMockEnabled; } catch (e) {}
-      try { window.getMockEnabled = getMockEnabled; } catch (e) {}
-      // dispatch a site-wide event so other scripts can react
-      try { window.dispatchEvent(new CustomEvent('mock-mode-changed', { detail: { enabled: !!on } })); } catch (e) {}
-    }
-  } catch (e) {}
-}
-
-export function getMockEnabled() {
-  try { if (typeof window !== 'undefined') return window.ENABLE_MOCK !== false; } catch (e) {}
-  return true;
-}
-
-// Also expose helpers on `window` for compatibility with non-module scripts
-try { if (typeof window !== 'undefined') { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } } catch (e) {}
-
-// Initialize mock mode default ON when this module loads so non-module pages
-// that import or call `window.getMockEnabled()` get a consistent default.
-try {
-  if (typeof window !== 'undefined') {
-    // If localStorage contains an explicit choice, respect it. Otherwise default ON.
-    try {
-      const stored = localStorage.getItem('ENABLE_MOCK');
-      if (stored === 'true') window.ENABLE_MOCK = true;
-      else if (stored === 'false') window.ENABLE_MOCK = false;
-      else if (typeof window.ENABLE_MOCK === 'undefined') {
-        window.ENABLE_MOCK = true;
-        try { localStorage.setItem('ENABLE_MOCK', 'true'); } catch (e) {}
-      }
-    } catch (e) {
-      if (typeof window.ENABLE_MOCK === 'undefined') window.ENABLE_MOCK = true;
-    }
-    // expose after initialization
-    try { window.setMockEnabled = setMockEnabled; window.getMockEnabled = getMockEnabled; } catch (e) {}
-    try { window.dispatchEvent(new CustomEvent('mock-mode-changed', { detail: { enabled: !!window.ENABLE_MOCK } })); } catch (e) {}
-  }
-} catch (e) { /* ignore */ }
+export function setMockEnabled(on) { try { /* no-op */ } catch (e) {} }
+export function getMockEnabled() { try { return false; } catch (e) {} return false; }
 
 // Add more API calls as needed

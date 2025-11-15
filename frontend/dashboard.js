@@ -337,26 +337,32 @@ async function renderCollectorDashboard() {
   createCollectionsChart('collectionsChart', collections);
 
   const binsContainer = document.getElementById('collectorBins');
-  const renderBins = (status = 'all') => {
+    const renderBins = (status = 'all') => {
     const shown = bins.filter(b => status === 'all' ? true : (b.status === status));
-    binsContainer.innerHTML = shown.map(b => `
+    binsContainer.innerHTML = shown.map(b => {
+      const statusSafe = (b.status || 'Unknown');
+      const levelPct = (b.level ?? Math.round(((b.currentWeight || 0) / (b.capacity || 1)) * 100));
+      return `
       <div class="bin-card">
         <div class="bin-header">
           <div class="bin-title">${b.location}</div>
-          <span class="bin-status ${b.status.toLowerCase()}">${b.status}</span>
+          <span class="bin-status ${statusSafe.toLowerCase()}">${statusSafe}</span>
         </div>
-        <div class="capacity-bar"><div class="capacity-fill" style="width:${b.level || Math.round((b.currentWeight||0)/(b.capacity||1)*100)}%"></div></div>
-        <div class="bin-meta">Level: ${b.level ?? Math.round((b.currentWeight||0)/(b.capacity||1)*100)}%</div>
+        <div class="capacity-bar"><div class="capacity-fill" style="width:${levelPct}%"></div></div>
+        <div class="bin-meta">Level: ${levelPct}%</div>
         <button class="btn" data-binid="${b._id}" data-action="collect">Collect</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     // Attach collect buttons
     binsContainer.querySelectorAll('button[data-action="collect"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const binId = btn.getAttribute('data-binid');
         // Pre-fill and open modal for quick collect
-        document.getElementById('collectBinSelectModal').value = binId;
-        document.getElementById('collectModal').style.display = 'flex';
+        const select = document.getElementById('collectBinSelectModal');
+        if (select) select.value = binId;
+        const modal = document.getElementById('collectModal');
+        if (modal) modal.style.display = 'flex';
       });
     });
   };
