@@ -395,8 +395,10 @@ async function oneClickCapture() {
     if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
 
   const body = { image_b64: b64, replySocketId: socket.id };
+  // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
+  const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
   const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceName, replySocketId: socket.id }) });
     // handle non-JSON error pages (e.g. 413) gracefully
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
@@ -475,12 +477,15 @@ async function requestRunModel() {
     let body = { replySocketId: socket.id };
     // If there's a captured image from the webcam, send it explicitly.
     if (lastCapturedB64) {
-      body = { image_b64: lastCapturedB64, replySocketId: socket.id };
-      // clear stored image after sending
-      lastCapturedB64 = null;
-      try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
+        // Instead of sending the image to the server (which would force server-side model run),
+        // prefer device-side model run. Send a run request for the configured device.
+        const deviceName2 = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
+        body = { deviceName: deviceName2, replySocketId: socket.id };
+        // clear stored image after sending (we don't send it to server)
+        lastCapturedB64 = null;
+        try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
     }
-  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
       throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
