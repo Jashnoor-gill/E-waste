@@ -99,6 +99,16 @@ document.addEventListener('DOMContentLoaded', () => {
           if (dashboardLink && dashboardLink.parentElement) menu.insertBefore(li2, dashboardLink.parentElement.nextSibling);
           else menu.appendChild(li2);
         }
+        // Ensure Profile link
+        if (!document.querySelector('#sidebar .sidebar-menu a[href*="profile"]')) {
+          const li3 = document.createElement('li');
+          li3.innerHTML = `<a href="profile.html"><span class="icon">👤</span> Profile</a>`;
+          // place profile near user-related links
+          const binLink = document.querySelector('#sidebar .sidebar-menu a[href*="bin-user"]');
+          if (binLink && binLink.parentElement) menu.insertBefore(li3, binLink.parentElement.nextSibling);
+          else menu.appendChild(li3);
+        }
+
         // Deduplicate Bin User links (keep first occurrence)
         try {
           const binAnchors = menu.querySelectorAll('a[href*="bin-user"]');
@@ -114,4 +124,48 @@ document.addEventListener('DOMContentLoaded', () => {
       // non-fatal
       console.error('Failed to ensure Dashboard link in sidebar', e);
     }
+  
+  // Add a small user panel in the sidebar header showing username and logout
+  try {
+    const header = document.querySelector('#sidebar .sidebar-header');
+    if (header) {
+      const userPanel = document.createElement('div');
+      userPanel.id = 'sidebarUserPanel';
+      userPanel.style.marginTop = '8px';
+      userPanel.style.display = 'flex';
+      userPanel.style.alignItems = 'center';
+      userPanel.style.gap = '8px';
+      userPanel.innerHTML = `
+        <div id="sidebarAvatar" style="width:40px;height:40px;border-radius:50%;background:#fff3;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">U</div>
+        <div id="sidebarUserInfo" style="color:#fff;font-size:0.95rem">
+          <div id="sidebarUserName">Guest</div>
+          <div style="font-size:0.8rem;color:#e0e0e0" id="sidebarUserRole"></div>
+        </div>
+        <div style="margin-left:auto">
+          <button id="sidebarLogoutBtn" style="background:transparent;border:none;color:#fff;cursor:pointer">Logout</button>
+        </div>
+      `;
+      header.appendChild(userPanel);
+
+      const token = localStorage.getItem('ew_token');
+      if (token) {
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).then(user => {
+          if (user) {
+            const name = user.username || user.name || user.email || 'User';
+            document.getElementById('sidebarUserName').textContent = name;
+            document.getElementById('sidebarUserRole').textContent = user.role || '';
+            // avatar initial
+            const av = document.getElementById('sidebarAvatar');
+            av.textContent = (user.username ? user.username[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : 'U'));
+          }
+        }).catch(()=>{/* ignore */});
+      }
+
+      document.getElementById('sidebarLogoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('ew_token');
+        localStorage.removeItem('ew_user');
+        window.location.href = 'login.html';
+      });
+    }
+  } catch (e) { /* non-fatal */ }
 });

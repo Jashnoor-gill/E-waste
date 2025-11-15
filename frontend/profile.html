@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Profile — E-Waste</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .profile-container{max-width:720px;margin:3rem auto;padding:1.5rem;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.08)}
+    label{display:block;margin-bottom:0.5rem}
+    input{width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:6px;margin-bottom:1rem}
+    .btn{display:inline-block;padding:0.6rem 1rem;border-radius:8px;background:#43a047;color:#fff;border:none;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <script src="sidebar.js"></script>
+    <main class="profile-container">
+      <h2>Your Profile</h2>
+      <form id="profileForm">
+        <label>Full name<input name="name" id="name" type="text"></label>
+        <label>Username<input name="username" id="username" type="text" required></label>
+        <label>Email<input name="email" id="email" type="email"></label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" id="cancelBtn" class="btn" style="background:#999">Cancel</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script type="module">
+    import { authFetch, logout } from './auth.js';
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ew_token') || '') } });
+        if (!res.ok) return window.location.replace('login.html');
+        const user = await res.json();
+        document.getElementById('name').value = user.name || '';
+        document.getElementById('username').value = user.username || '';
+        document.getElementById('email').value = user.email || '';
+        // store id for update
+        document.getElementById('profileForm').dataset.userid = user._id || user.id || '';
+      } catch (e) {
+        console.error('Failed to load profile', e);
+      }
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.dataset.userid;
+      if (!id) return alert('User ID not found. Please re-login.');
+      const body = {
+        name: document.getElementById('name').value,
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value
+      };
+      try {
+        const res = await authFetch('/api/users/' + encodeURIComponent(id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({}));
+          return alert(err.error || 'Failed to update profile');
+        }
+        alert('Profile updated');
+        // refresh local user info
+        const me = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ew_token') || '') } }).then(r=>r.json()).catch(()=>null);
+        if (me) localStorage.setItem('ew_user', JSON.stringify(me));
+        // optionally redirect to dashboard
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.error(err);
+        alert('Failed to update profile');
+      }
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'dashboard.html'; });
+
+    loadProfile();
+  </script>
+</body>
+</html>
