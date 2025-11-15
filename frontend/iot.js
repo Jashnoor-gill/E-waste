@@ -366,6 +366,8 @@ async function captureFromWebcam() {
     const runBtn = document.getElementById('iotRunModelBtn');
     if (runBtn) runBtn.disabled = false;
   } catch (e) { /* ignore */ }
+  // Stop the webcam after capture so the camera doesn't stay running
+  try { stopWebcam(); } catch (e) { /* ignore */ }
 }
 
 // One-click flow: start camera, capture one frame, send it, then stop camera.
