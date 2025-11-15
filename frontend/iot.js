@@ -102,7 +102,8 @@ function setupUi() {
       // Basic validation: try to detect common image formats by magic bytes (JPEG or PNG)
       let mime = null;
       try {
-        const sample = atob(imgB64.slice(0, 40));
+        // decode a small sample and inspect for JPEG/PNG or SVG (text)
+        const sample = atob(imgB64.slice(0, 80));
         const b0 = sample.charCodeAt(0);
         const b1 = sample.charCodeAt(1);
         const b2 = sample.charCodeAt(2);
@@ -111,6 +112,8 @@ function setupUi() {
         if (b0 === 0xFF && b1 === 0xD8) mime = 'image/jpeg';
         // PNG magic bytes: 0x89 0x50 0x4E 0x47
         else if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4E && b3 === 0x47) mime = 'image/png';
+        // SVG (text) typically starts with '<'
+        else if (sample && sample.length > 0 && sample[0] === '<') mime = 'image/svg+xml';
       } catch (e) { mime = null; }
       if (!mime) {
         console.warn('Received iot-photo but payload does not look like a supported image; showing raw payload for debugging', payload);

@@ -31,9 +31,9 @@ router.post('/capture', async (req, res) => {
   if (!targetSocketId) {
     if (skipDevice) {
       const requestId = makeReqId();
-      // simple placeholder image (1x1 PNG base64) to allow downstream testing
-      // This is a valid tiny PNG so the frontend will display it during simulated captures.
-      const placeholderB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+      // placeholder image as a 320x240 SVG (base64) so simulated captures render nicely
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="100%" height="100%" fill="#eef0f2"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#374151" font-family="Arial, Helvetica, sans-serif" font-size="20">Simulated Capture</text></svg>`;
+      const placeholderB64 = Buffer.from(svg).toString('base64');
       // If caller provided a replySocketId, emit iot-photo so UI that listens on sockets still works
       const replySocketId = req.body && req.body.replySocketId;
       const requestMap = req.app.get('requestMap');
