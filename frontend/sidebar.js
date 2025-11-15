@@ -1,5 +1,82 @@
 // Sidebar toggle functionality
 document.addEventListener('DOMContentLoaded', () => {
+  // Debug helper: capture failed network/resource loads and show them in an overlay
+  try {
+    const dbgOverlayId = 'networkDebugOverlay';
+    function ensureDbgOverlay() {
+      let o = document.getElementById(dbgOverlayId);
+      if (!o) {
+        o = document.createElement('div');
+        o.id = dbgOverlayId;
+        o.style.position = 'fixed';
+        o.style.right = '12px';
+        o.style.bottom = '12px';
+        o.style.zIndex = '99999';
+        o.style.maxWidth = '360px';
+        o.style.maxHeight = '40vh';
+        o.style.overflow = 'auto';
+        o.style.background = 'rgba(0,0,0,0.8)';
+        o.style.color = '#fff';
+        o.style.fontSize = '12px';
+        o.style.padding = '8px';
+        o.style.borderRadius = '8px';
+        o.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
+        o.style.display = 'none';
+        const title = document.createElement('div');
+        title.textContent = 'Network Errors (click to clear)';
+        title.style.fontWeight = '700';
+        title.style.marginBottom = '6px';
+        o.appendChild(title);
+        const list = document.createElement('div'); list.id = dbgOverlayId + '_list'; o.appendChild(list);
+        o.addEventListener('click', () => { list.innerHTML = ''; o.style.display = 'none'; });
+        document.body.appendChild(o);
+      }
+      return document.getElementById(dbgOverlayId + '_list');
+    }
+
+    function reportNetworkError(msg) {
+      try {
+        console.warn('NetworkDebug:', msg);
+        const list = ensureDbgOverlay();
+        const o = document.getElementById(dbgOverlayId);
+        if (o) o.style.display = 'block';
+        const el = document.createElement('div');
+        el.style.marginBottom = '6px';
+        el.textContent = msg;
+        list.insertBefore(el, list.firstChild);
+      } catch (e) { console.warn('reportNetworkError failed', e); }
+    }
+
+    // Patch fetch to surface non-OK responses
+    if (window.fetch) {
+      const _fetch = window.fetch.bind(window);
+      window.fetch = async function(input, init) {
+        try {
+          const res = await _fetch(input, init);
+          if (!res.ok) {
+            const url = (typeof input === 'string') ? input : (input && input.url) ? input.url : String(input);
+            reportNetworkError(`${res.status} ${res.statusText} — ${url}`);
+          }
+          return res;
+        } catch (err) {
+          reportNetworkError(`Fetch error: ${err && err.message ? err.message : err} — ${String(input)}`);
+          throw err;
+        }
+      };
+    }
+
+    // Listen for resource loading errors (scripts, images, etc.)
+    window.addEventListener('error', (ev) => {
+      try {
+        if (ev && ev.target && (ev.target.src || ev.target.href)) {
+          const src = ev.target.src || ev.target.href;
+          reportNetworkError(`Resource load failed: ${src}`);
+        } else if (ev && ev.message) {
+          reportNetworkError(`JS error: ${ev.message}`);
+        }
+      } catch (e) {}
+    }, true);
+  } catch (e) { /* non-fatal */ }
   const hamburger = document.getElementById('hamburgerMenu');
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.querySelector('.main-content');
