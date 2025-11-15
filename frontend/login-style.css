@@ -10,7 +10,8 @@ section {
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  background: url("assets/img/login-bg.jpeg") no-repeat;
+  /* Use the bundled background image from assets/login-bg.jpeg */
+  background: url("assets/login-bg.jpeg") no-repeat;
   background-position: center;
   background-size: cover;
 }
