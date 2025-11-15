@@ -65,6 +65,8 @@
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap">
             <a class="btn" href="bin-user.html">Track Your Waste</a>
             <a class="btn" href="about.html" style="background:#7fbf7a">Learn More</a>
+            <!-- Home page mock toggle (added for quick demo control). Defaults to ON. -->
+            <button id="mockToggleHomeBtn" class="btn" style="margin-left:0.25rem; background:#e8f5e9">Mock: On</button>
           </div>
         </div>
         <div style="flex:1; min-width:280px; text-align:right">
@@ -150,6 +152,38 @@
   <script>
     // Disable local webcam by default on deployed site pages that load iot.js
     window.DISABLE_LOCAL_WEBCAM = true;
+  </script>
+  <script>
+    // Home-page mock toggle initializer.
+    // By default we enable mock/demo mode (window.ENABLE_MOCK = true)
+    (function(){
+      try {
+        // Initialize from localStorage if present, otherwise default ON
+        const stored = localStorage.getItem('ENABLE_MOCK');
+        if (stored === null) {
+          window.ENABLE_MOCK = true;
+          try { localStorage.setItem('ENABLE_MOCK','true'); } catch(e){}
+        } else {
+          window.ENABLE_MOCK = (stored === 'true');
+        }
+
+        const btn = document.getElementById('mockToggleHomeBtn');
+        if (!btn) return;
+        function updateUI() {
+          const on = window.ENABLE_MOCK !== false;
+          btn.textContent = on ? 'Mock: On' : 'Mock: Off';
+          btn.style.background = on ? '#e8f5e9' : '#fff3e0';
+        }
+        updateUI();
+        btn.addEventListener('click', () => {
+          try {
+            window.ENABLE_MOCK = !(window.ENABLE_MOCK !== false);
+            localStorage.setItem('ENABLE_MOCK', window.ENABLE_MOCK ? 'true' : 'false');
+            updateUI();
+          } catch(e) { console.warn('mock toggle failed', e); }
+        });
+      } catch (e) { console.warn('init mock toggle failed', e); }
+    })();
   </script>
   
 </body>
