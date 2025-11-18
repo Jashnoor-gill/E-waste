@@ -48,6 +48,45 @@ async function runLocalModelOnImg(imgEl) {
     return null;
   }
 }
+// Read whether the user prefers using the server model (persisted in localStorage)
+function getUseServerModel() {
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('USE_SERVER_MODEL');
+      if (stored !== null) return stored === 'true';
+      return !!window.USE_SERVER_MODEL;
+    }
+  } catch (e) { /* ignore */ }
+  return false;
+}
+
+// Send captured base64 image to the server model service and render the result.
+async function callServerModel(imageB64) {
+  if (!imageB64) throw new Error('No image provided to server model');
+  const svc = (typeof window !== 'undefined' && window.MODEL_SERVICE_URL) ? window.MODEL_SERVICE_URL : ORIGIN;
+  const url = `${svc.replace(/\/$/, '')}/infer`;
+  try {
+    showModelLoading(true);
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image_b64: imageB64 }) });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => `Status ${res.status}`);
+      throw new Error(`Model service error ${res.status}: ${txt.slice(0,200)}`);
+    }
+    const j = await res.json();
+    // Model service returns { label, confidence }
+    if (j && (j.label || typeof j.confidence !== 'undefined')) {
+      renderModelResult({ label: j.label || 'Unknown', confidence: (typeof j.confidence === 'number') ? j.confidence : (j.conf || 0), source: 'server' });
+      showModelLoading(false);
+      return j;
+    }
+    throw new Error('Unexpected response from model service');
+  } catch (err) {
+    console.error('callServerModel failed', err);
+    renderModelResult({ error: err.message || 'server_model_failed', source: 'server' });
+    showModelLoading(false);
+    return null;
+  }
+}
 // If set to true (or '1'/'true') in a site-level config, the frontend will
 // completely disable use of the local laptop webcam and only use Pi feeds.
 // Allow an override via localStorage `ENABLE_LOCAL_WEBCAM` so users can toggle
@@ -620,6 +659,13 @@ async function captureFromWebcam() {
       const imgEl = imgContainer && imgContainer.querySelector('img');
       if (imgEl) runLocalModelOnImg(imgEl).catch(e => console.warn('runLocalModelOnImg failed', e));
     }
+    // If user prefers server model, call server inference on this captured image
+    try {
+      if (getUseServerModel && getUseServerModel()) {
+        // run server model in background (do not block UI)
+        callServerModel(b64).catch(e => console.warn('callServerModel failed (captureFromWebcam)', e));
+      }
+    } catch (e) { /* ignore */ }
   } catch (e) { /* ignore */ }
   // Persist the captured frame to the backend so it can be shown to other clients and via the Pi feed endpoints
   try {
@@ -687,12 +733,20 @@ async function oneClickCapture() {
         if (imgEl) await runLocalModelOnImg(imgEl);
       }
     } catch (e) { console.warn('runLocalModelOnImg failed in oneClickCapture', e); }
+    // If user prefers server-side model, call it directly and skip device run
+    if (getUseServerModel && getUseServerModel()) {
+      try {
+        await callServerModel(b64);
+      } catch (e) { console.warn('callServerModel failed in oneClickCapture', e); }
+      showModelLoading(false);
+      return;
+    }
 
     const body = { image_b64: b64, replySocketId: socket.id };
-  // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
-  const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
-  const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-  const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceName, replySocketId: socket.id }) });
+    // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
+    const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceName, replySocketId: socket.id }) });
     // handle non-JSON error pages (e.g. 413) gracefully
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
@@ -817,6 +871,18 @@ async function requestRunModel() {
             await window.persistFrameToServer('browser', lastCapturedB64);
           }
         } catch (e) { console.warn('persistFrameToServer failed before runModel', e); }
+        // If user prefers server-side model, call server inference directly
+        try {
+          if (getUseServerModel && getUseServerModel()) {
+            await callServerModel(lastCapturedB64);
+            // clear stored image after using it
+            lastCapturedB64 = null;
+            try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
+            showModelLoading(false);
+            return;
+          }
+        } catch (e) { console.warn('callServerModel failed in requestRunModel pre-check', e); }
+
         const deviceName2 = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
         body = { deviceName: deviceName2, replySocketId: socket.id };
         // clear stored image after uploading
