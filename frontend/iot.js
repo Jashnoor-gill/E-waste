@@ -15,15 +15,52 @@ window.iotSocket = socket;
 let __localModel = null;
 async function loadLocalModel() {
   if (__localModel) return __localModel;
+  // Helper to inject a plain script tag and wait for load
+  function loadScript(src, isModule = false) {
+    return new Promise((resolve, reject) => {
+      try {
+        const s = document.createElement('script');
+        s.src = src;
+        if (isModule) s.type = 'module';
+        s.onload = () => resolve();
+        s.onerror = (e) => reject(new Error('Failed to load script: ' + src));
+        document.head.appendChild(s);
+      } catch (e) { reject(e); }
+    });
+  }
+
   try {
-    // Load TFJS and MobileNet from CDN (lazy)
-    await import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js');
-    const mobilenet = await import('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js');
+    // Try UMD script approach so `window.tf` is available for mobilenet UMD builds
+    const tfUrl = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js';
+    const mnUrl = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js';
+    // If tf is already present, skip loading
+    if (typeof window !== 'undefined' && !window.tf) {
+      await loadScript(tfUrl);
+    }
+    // If mobilenet global not present, load its UMD script
+    if (typeof window !== 'undefined' && !window.mobilenet) {
+      await loadScript(mnUrl);
+    }
+    if (typeof window !== 'undefined' && window.mobilenet) {
+      __localModel = await window.mobilenet.load();
+      console.log('Local MobileNet (UMD) loaded');
+      return __localModel;
+    }
+  } catch (err) {
+    console.warn('UMD script load failed, falling back to ESM imports', err);
+    // continue to ESM fallback below
+  }
+
+  // ESM fallback: try dynamic import of ESM bundles
+  try {
+    const tf = await import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.esm.js');
+    const mobilenet = await import('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.esm.js');
+    // mobilenet module exposes `load` function
     __localModel = await mobilenet.load();
-    console.log('Local MobileNet loaded');
+    console.log('Local MobileNet (ESM) loaded');
     return __localModel;
   } catch (err) {
-    console.warn('Failed to load local model', err);
+    console.warn('Failed to load local model via ESM', err);
     __localModel = null;
     throw err;
   }
