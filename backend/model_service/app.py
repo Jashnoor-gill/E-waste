@@ -56,7 +56,10 @@ class InferRequest(BaseModel):
     image_b64: str
 
 
-MODEL_PATH = os.environ.get('MODEL_PATH') or str(Path(__file__).resolve().parents[2] / 'Model' / 'Model' / 'resnet50_ewaste_traced.pt')
+DEFAULT_MODEL = Path(__file__).resolve().parents[2] / 'Model' / 'Model' / 'resnet50_ewaste_traced.pt'
+# Also check for model provided in repo under `pi_model/DP-Group-17-/Model/` (common user upload)
+ALT_MODEL = Path(__file__).resolve().parents[2] / 'pi_model' / 'DP-Group-17-' / 'Model' / 'resnet50_ewaste_traced.pt'
+MODEL_PATH = os.environ.get('MODEL_PATH') or (str(DEFAULT_MODEL) if DEFAULT_MODEL.exists() else (str(ALT_MODEL) if ALT_MODEL.exists() else str(DEFAULT_MODEL)))
 MODEL_DOWNLOAD_URL = os.environ.get('MODEL_DOWNLOAD_URL') or os.environ.get('MODEL_S3_URL')
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
