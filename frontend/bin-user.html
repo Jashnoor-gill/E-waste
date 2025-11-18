@@ -90,6 +90,20 @@
           const wrap = document.createElement('div');
           wrap.style.margin = '0.5rem 0';
           wrap.innerHTML = `<label style="display:inline-flex;align-items:center;gap:0.5rem"><input type="checkbox" id="localWebcamToggle"> Use Local Webcam</label>`;
+          // model source toggle: default to Local (unchecked means use local model)
+          const modelWrap = document.createElement('div');
+          modelWrap.style.marginTop = '0.25rem';
+          modelWrap.innerHTML = `<label style="display:inline-flex;align-items:center;gap:0.5rem"><input type="checkbox" id="useServerModelToggle"> Use Server Model</label>`;
+          panel.insertBefore(modelWrap, panel.firstChild);
+          const mb = document.getElementById('useServerModelToggle');
+          if (mb) {
+            const storedModel = localStorage.getItem('USE_SERVER_MODEL');
+            const useServer = storedModel === 'true' ? true : false;
+            mb.checked = useServer;
+            mb.addEventListener('change', () => {
+              try { localStorage.setItem('USE_SERVER_MODEL', mb.checked ? 'true' : 'false'); window.USE_SERVER_MODEL = mb.checked; } catch (e) {}
+            });
+          }
           panel.insertBefore(wrap, panel.firstChild);
           const cb = document.getElementById('localWebcamToggle');
           if (!cb) return;
