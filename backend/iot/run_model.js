@@ -55,7 +55,25 @@ router.post('/run-model', async (req, res) => {
       const requestId = `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
       const replySocketId = body.replySocketId;
       const requestMap = req.app.get('requestMap');
-      if (replySocketId && requestMap) requestMap.set(requestId, { replySocketId, ts: Date.now() });
+      // store mapping and set a timeout so callers get notified if device doesn't respond
+      if (requestMap) {
+        const TIMEOUT_MS = parseInt(process.env.IOT_REQUEST_TIMEOUT_MS || '20000', 10);
+        // set a timer that will notify the reply socket of a timeout and cleanup
+        const timeoutId = setTimeout(() => {
+          try {
+            if (requestMap.has(requestId)) {
+              const entry = requestMap.get(requestId) || {};
+              const dest = entry.replySocketId;
+              if (dest) {
+                try { req.app.get('io').to(dest).emit('iot-model-result', { requestId, error: 'device_timeout' }); } catch (e) { /* ignore */ }
+              }
+              requestMap.delete(requestId);
+            }
+          } catch (e) { /* ignore */ }
+        }, TIMEOUT_MS);
+        if (replySocketId) requestMap.set(requestId, { replySocketId, ts: Date.now(), timeoutId });
+        else requestMap.set(requestId, { ts: Date.now(), timeoutId });
+      }
       req.app.get('io').to(targetSocketId).emit('run_model', { requestId, params: body || {} });
       return res.status(202).json({ requestId, message: 'Run model requested (device)' });
     }

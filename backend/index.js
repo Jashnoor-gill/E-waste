@@ -136,7 +136,10 @@ io.on('connection', (socket) => {
     try {
       const rid = payload && payload.requestId;
       if (rid && requestMap.has(rid)) {
-        const dest = requestMap.get(rid).replySocketId;
+        const mapping = requestMap.get(rid) || {};
+        const dest = mapping.replySocketId;
+        // clear any outstanding timeout associated with this request
+        try { if (mapping.timeoutId) clearTimeout(mapping.timeoutId); } catch (e) {}
         if (dest) io.to(dest).emit('iot-photo', payload);
         // cleanup mapping
         requestMap.delete(rid);
@@ -151,7 +154,10 @@ io.on('connection', (socket) => {
     try {
       const rid = payload && payload.requestId;
       if (rid && requestMap.has(rid)) {
-        const dest = requestMap.get(rid).replySocketId;
+        const mapping = requestMap.get(rid) || {};
+        const dest = mapping.replySocketId;
+        // clear timeout for this request
+        try { if (mapping.timeoutId) clearTimeout(mapping.timeoutId); } catch (e) {}
         if (dest) io.to(dest).emit('iot-model-result', payload);
         requestMap.delete(rid);
         return;
