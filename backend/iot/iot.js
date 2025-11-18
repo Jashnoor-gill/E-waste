@@ -25,9 +25,10 @@ router.post('/capture', async (req, res) => {
     if (!first.done) targetSocketId = first.value[1];
   }
 
-  // If no device connected, allow a simulated response for local testing.
-  // Set env SKIP_DEVICE_FORWARDING=true to enable simulation (default: true for easier local testing).
-  const skipDevice = (process.env.SKIP_DEVICE_FORWARDING || 'true').toLowerCase() === 'true';
+  // If no device connected, we previously allowed a simulated response for local testing.
+  // To avoid mock/simulated behavior in production, default simulation is disabled.
+  // Set env SKIP_DEVICE_FORWARDING=true to enable simulation explicitly when needed.
+  const skipDevice = (process.env.SKIP_DEVICE_FORWARDING || 'false').toLowerCase() === 'true';
   if (!targetSocketId) {
     if (skipDevice) {
       const requestId = makeReqId();
