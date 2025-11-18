@@ -224,7 +224,18 @@ function setupUi() {
       }
 
       const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        // If no frame found (404), show a friendly placeholder instead of spamming console
+        if (res.status === 404) {
+          const img = document.getElementById('remoteFrameImg');
+          if (img) {
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><rect width='100%' height='100%' fill='#f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#6b7280' font-size='14'>No camera frame yet (${deviceId})</text></svg>`;
+            img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+            img.style.display = 'block';
+          }
+        }
+        return;
+      }
       const j = await res.json();
       if (j && j.frame) {
         const img = document.getElementById('remoteFrameImg');
