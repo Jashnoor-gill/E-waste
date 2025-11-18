@@ -587,7 +587,17 @@ function renderModelResult(result) {
   const rc = document.getElementById('iotModelResult');
   if (!rc) return;
   // Accept both { requestId, result: { label, confidence } } and direct result
-  const payload = result.result ? result.result : result;
+  const payload = result && result.result ? result.result : result || {};
+  // If device or server returned an error, show a clear message
+  if (payload.error || result && result.error) {
+    const err = (payload.error || result.error || 'unknown_error');
+    let msg = 'Model run failed';
+    if (err === 'device_timeout') msg = 'Device did not respond (timeout). Please check the device.';
+    else msg = `Error: ${err}`;
+    rc.innerHTML = `<div class="card" style="padding:1rem; color:#c62828"><strong>${msg}</strong></div>`;
+    return;
+  }
+
   const label = payload.label || 'Unknown';
   const confidence = typeof payload.confidence === 'number' ? payload.confidence : (payload.conf ? payload.conf : 0);
 
@@ -596,7 +606,7 @@ function renderModelResult(result) {
       <div class="iot-result-label">${label}</div>
       <div class="iot-result-confidence">Confidence: ${(confidence * 100).toFixed(1)}%</div>
       <div class="confidence-bar"><div class="confidence-fill" style="width:${Math.max(0, Math.min(100, confidence*100))}%"></div></div>
-      <div class="iot-result-source">Source: ${payload.source || 'server'}</div>
+      <div class="iot-result-source">Source: ${payload.source || (result && result.source) || 'server'}</div>
     </div>
   `;
 }
