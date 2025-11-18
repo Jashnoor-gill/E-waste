@@ -40,9 +40,25 @@ function setupUi() {
     // Hide local video element if present
     try { const v = document.getElementById(VIDEO_ID); if (v) v.style.display = 'none'; } catch(e){}
   } else {
-    if (webcamStartBtn) webcamStartBtn.addEventListener('click', () => startPreferredCamera());
+    // Setup local webcam UI labels and handlers
+    try {
+      if (webcamStartBtn) webcamStartBtn.textContent = 'Start Local Webcam';
+      if (webcamCaptureBtn) { webcamCaptureBtn.textContent = 'Capture (local)'; webcamCaptureBtn.disabled = true; }
+      if (webcamOneClickBtn) webcamOneClickBtn.textContent = 'One-Click Capture';
+    } catch (e) {}
+
+    // Toggle handler: start or stop local webcam depending on current state
+    const toggleLocalWebcam = () => {
+      const v = document.getElementById(VIDEO_ID);
+      if (v && v.srcObject) return stopWebcam();
+      return startWebcam();
+    };
+
+    if (webcamStartBtn) webcamStartBtn.addEventListener('click', toggleLocalWebcam);
     if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
+    // Capture from running webcam
     if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
+    // One-click button: start->capture->stop
     if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
   }
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
@@ -255,6 +271,15 @@ function setupUi() {
             try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg via presignedUrl', j.presignedUrl); } catch(e){}
             return;
           }
+          // If backend returns a GridFS url (or generic `url`) prefer that
+          if (j.url) {
+            // If URL is relative, prefix with origin
+            const u = (j.url.startsWith('http://') || j.url.startsWith('https://')) ? j.url : `${ORIGIN.replace(/\/$/, '')}${j.url}`;
+            img.src = u;
+            img.style.display = 'block';
+            try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg via gridfs/url', u); } catch(e){}
+            return;
+          }
           if (j.frame) {
             // Detect common base64 prefixes to choose MIME safely without decoding.
             const p = (j.frame || '').slice(0, 8);
@@ -348,13 +373,15 @@ function setupUi() {
         // start Pi feed
         startPiFeed(deviceId);
       } else {
-        // fall back to local webcam unless local webcam usage is disabled
+        // fall back: DO NOT auto-start the local webcam here. The preferred UX is
+        // to only start local camera when the user explicitly clicks Capture.
         if (DISABLE_LOCAL_WEBCAM) {
-          // Inform user and do not start local camera
           try { alert('No Pi feed available and local webcam usage is disabled by site configuration.'); } catch(e) {}
           return;
         }
-        await startWebcam();
+        try {
+          alert('No Pi feed available. Click the Capture button to start the camera for a one-shot capture.');
+        } catch (e) { /* ignore */ }
       }
     } catch (err) {
       console.warn('startPreferredCamera failed', err);
@@ -363,7 +390,7 @@ function setupUi() {
     }
   }
   // Expose helpers so autostart and other scripts can call them from global scope
-  try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; } catch(e) {}
+  try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; window.startWebcam = startWebcam; window.stopWebcam = stopWebcam; } catch(e) {}
 }
 
 // Periodic capture loop (frontend-driven) to simulate a live Pi camera without changing Pi code.
@@ -476,6 +503,13 @@ async function startWebcam() {
     v.srcObject = stream;
     v.style.display = 'block';
     _webcamStream = stream;
+    // Update UI: enable capture button and update start button appearance
+    try {
+      const startBtn = document.getElementById('webcamStartBtn');
+      const captureBtn = document.getElementById('webcamCaptureBtn');
+      if (startBtn) { startBtn.textContent = 'Stop Local Webcam'; startBtn.style.background = '#e8f5e9'; }
+      if (captureBtn) { captureBtn.disabled = false; }
+    } catch (e) { /* ignore UI update errors */ }
   } catch (err) {
     console.error('startWebcam failed', err);
     alert('Unable to access camera: ' + (err.message || err));
@@ -490,6 +524,13 @@ function stopWebcam() {
       _webcamStream.getTracks().forEach(t => t.stop());
       _webcamStream = null;
     }
+    // Update UI: disable capture button and restore start button text
+    try {
+      const startBtn = document.getElementById('webcamStartBtn');
+      const captureBtn = document.getElementById('webcamCaptureBtn');
+      if (startBtn) { startBtn.textContent = 'Start Local Webcam'; startBtn.style.background = ''; }
+      if (captureBtn) { captureBtn.disabled = true; }
+    } catch (e) { /* ignore UI update errors */ }
   } catch (err) {
     console.error('stopWebcam failed', err);
   }
