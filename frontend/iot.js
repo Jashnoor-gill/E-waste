@@ -11,6 +11,43 @@ const socket = ioClient(SOCKET_URL);
 
 // Expose to window for quick debugging
 window.iotSocket = socket;
+// Client-side model (optional): lazy-load TensorFlow.js + MobileNet for on-page predictions
+let __localModel = null;
+async function loadLocalModel() {
+  if (__localModel) return __localModel;
+  try {
+    // Load TFJS and MobileNet from CDN (lazy)
+    await import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js');
+    const mobilenet = await import('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js');
+    __localModel = await mobilenet.load();
+    console.log('Local MobileNet loaded');
+    return __localModel;
+  } catch (err) {
+    console.warn('Failed to load local model', err);
+    __localModel = null;
+    throw err;
+  }
+}
+
+async function runLocalModelOnImg(imgEl) {
+  if (!imgEl) throw new Error('No image element');
+  try {
+    const model = await loadLocalModel();
+    if (!model) throw new Error('Model not available');
+    // classify returns [{className, probability}, ...]
+    const preds = await model.classify(imgEl, 3);
+    if (!preds || preds.length === 0) return renderModelResult({ label: 'Unknown', confidence: 0, source: 'local' });
+    const top = preds[0];
+    const label = top.className || String(top.label || 'Unknown');
+    const confidence = typeof top.probability === 'number' ? top.probability : (top.prob || 0);
+    renderModelResult({ label, confidence, source: 'local' });
+    return { label, confidence };
+  } catch (err) {
+    console.warn('Local model failed', err);
+    renderModelResult({ error: 'local_model_failed', source: 'local' });
+    return null;
+  }
+}
 // If set to true (or '1'/'true') in a site-level config, the frontend will
 // completely disable use of the local laptop webcam and only use Pi feeds.
 const DISABLE_LOCAL_WEBCAM = (typeof window !== 'undefined' && (window.DISABLE_LOCAL_WEBCAM === true || window.DISABLE_LOCAL_WEBCAM === '1' || window.DISABLE_LOCAL_WEBCAM === 'true'));
@@ -564,6 +601,14 @@ async function captureFromWebcam() {
   if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
   // store captured image and enable Run Model button
   lastCapturedB64 = b64;
+  // If local model usage is enabled, run prediction on the captured image element
+  try {
+    const useLocal = (typeof window !== 'undefined' && (window.USE_LOCAL_MODEL === undefined || window.USE_LOCAL_MODEL === true));
+    if (useLocal) {
+      const imgEl = imgContainer && imgContainer.querySelector('img');
+      if (imgEl) runLocalModelOnImg(imgEl).catch(e => console.warn('runLocalModelOnImg failed', e));
+    }
+  } catch (e) { /* ignore */ }
   // Persist the captured frame to the backend so it can be shown to other clients and via the Pi feed endpoints
   try {
     if (window.persistFrameToServer) {
@@ -621,6 +666,15 @@ async function oneClickCapture() {
         await window.persistFrameToServer('browser', b64);
       }
     } catch (e) { console.warn('persistFrameToServer failed in oneClickCapture', e); }
+
+    // Run local model if enabled
+    try {
+      const useLocal = (typeof window !== 'undefined' && (window.USE_LOCAL_MODEL === undefined || window.USE_LOCAL_MODEL === true));
+      if (useLocal) {
+        const imgEl = imgContainer && imgContainer.querySelector('img');
+        if (imgEl) await runLocalModelOnImg(imgEl);
+      }
+    } catch (e) { console.warn('runLocalModelOnImg failed in oneClickCapture', e); }
 
     const body = { image_b64: b64, replySocketId: socket.id };
   // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
