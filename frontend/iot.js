@@ -151,6 +151,8 @@ function setupUi() {
         console.warn('Received iot-photo but payload does not look like a supported image; showing raw payload for debugging', payload);
         imgContainer.innerHTML = `<div class="card" style="padding:1rem; color:#c62828">Received non-image payload (size ${imgB64.length} chars). Check device capture code.</div>`;
       } else {
+        // Debug: log prefix and chosen mime to investigate load failures
+        try { console.log('iot-photo -> setting capture image mime=', mime, 'prefix=', (imgB64||'').slice(0,8)); } catch(e){}
         imgContainer.innerHTML = `<img src="data:${mime};base64,${imgB64}" style="width:100%; max-width:640px; height:auto; border-radius:8px;"/>`;
         // If device id is provided, persist the received frame to the frame server
         try {
@@ -210,11 +212,16 @@ function setupUi() {
           const img = document.getElementById('remoteFrameImg');
           if (!img) return;
           if (b64) {
-            // try detect if SVG or JPEG/PNG by looking for '<' inside decoded sample
-            let decoded = '';
-            try { decoded = atob(b64.slice(0, 80)); } catch (e) { decoded = ''; }
-            if (decoded && decoded[0] === '<') img.src = 'data:image/svg+xml;base64,' + b64;
-            else img.src = 'data:image/jpeg;base64,' + b64;
+            // Detect common base64 prefixes to identify type without decoding partial chunks.
+            // SVGs encoded from '<svg' typically start with 'PHN2' (base64 for '<svg').
+            // XML prolog '<?xml' starts with 'PD94'. JPEG base64 often starts with '/9j/'. PNG starts with 'iVBOR'.
+            const prefix = (b64 || '').slice(0, 8);
+            let chosen;
+            if (prefix.startsWith('PHN2') || prefix.startsWith('PD94')) { chosen = 'image/svg+xml'; img.src = 'data:image/svg+xml;base64,' + b64; }
+            else if (prefix.startsWith('iVBOR')) { chosen = 'image/png'; img.src = 'data:image/png;base64,' + b64; }
+            else if (prefix.startsWith('/9j') || prefix.startsWith('/9j/')) { chosen = 'image/jpeg'; img.src = 'data:image/jpeg;base64,' + b64; }
+            else { chosen = 'image/jpeg'; img.src = 'data:image/jpeg;base64,' + b64; }
+            try { console.log('mock fetchAndUpdatePiFrame -> set remoteFrameImg mime=', chosen, 'prefix=', prefix); } catch(e){}
             img.style.display = 'block';
           } else {
             img.style.display = 'none';
@@ -225,13 +232,14 @@ function setupUi() {
 
       const res = await fetch(`${ORIGIN.replace(/\/$/, '')}/api/frame/latest_frame?device_id=${encodeURIComponent(deviceId)}`);
       if (!res.ok) {
-        // If no frame found (404), show a friendly placeholder instead of spamming console
+        // If no frame found (404), do not automatically show a placeholder image here.
+        // Showing a placeholder on feed start was noisy; keep the remote frame hidden
+        // until an actual frame is available (the placeholder card is shown via
+        // other UI flows when appropriate).
         if (res.status === 404) {
           const img = document.getElementById('remoteFrameImg');
           if (img) {
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><rect width='100%' height='100%' fill='#f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#6b7280' font-size='14'>No camera frame yet (${deviceId})</text></svg>`;
-            img.src = 'data:image/svg+xml;base64,' + btoa(svg);
-            img.style.display = 'block';
+            img.style.display = 'none';
           }
         }
         return;
@@ -240,7 +248,14 @@ function setupUi() {
       if (j && j.frame) {
         const img = document.getElementById('remoteFrameImg');
         if (img) {
-          img.src = 'data:image/jpeg;base64,' + j.frame;
+          // Detect common base64 prefixes to choose MIME safely without decoding.
+          const p = (j.frame || '').slice(0, 8);
+          let mime = 'image/jpeg';
+          if (p.startsWith('PHN2') || p.startsWith('PD94')) mime = 'image/svg+xml';
+          else if (p.startsWith('iVBOR')) mime = 'image/png';
+          else if (p.startsWith('/9j') || p.startsWith('/9j/')) mime = 'image/jpeg';
+          img.src = `data:${mime};base64,${j.frame}`;
+          try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg mime=', mime, 'prefix=', p); } catch(e){}
           img.style.display = 'block';
         }
       }
