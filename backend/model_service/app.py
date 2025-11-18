@@ -57,9 +57,15 @@ class InferRequest(BaseModel):
 
 
 DEFAULT_MODEL = Path(__file__).resolve().parents[2] / 'Model' / 'Model' / 'resnet50_ewaste_traced.pt'
-# Also check for model provided in repo under `pi_model/DP-Group-17-/Model/` (common user upload)
-ALT_MODEL = Path(__file__).resolve().parents[2] / 'pi_model' / 'DP-Group-17-' / 'Model' / 'resnet50_ewaste_traced.pt'
-MODEL_PATH = os.environ.get('MODEL_PATH') or (str(DEFAULT_MODEL) if DEFAULT_MODEL.exists() else (str(ALT_MODEL) if ALT_MODEL.exists() else str(DEFAULT_MODEL)))
+# Also check for user-provided traced model under `pi_model/DP-Group-17-/Model/`
+# Prefer the new_layer4 variant if present
+ALT_MODEL_NEW = Path(__file__).resolve().parents[2] / 'pi_model' / 'DP-Group-17-' / 'Model' / 'new_layer4_resnet50_ewaste_traced.pt'
+ALT_MODEL_OLD = Path(__file__).resolve().parents[2] / 'pi_model' / 'DP-Group-17-' / 'Model' / 'resnet50_ewaste_traced.pt'
+MODEL_PATH = os.environ.get('MODEL_PATH') or (
+    str(ALT_MODEL_NEW) if ALT_MODEL_NEW.exists()
+    else (str(ALT_MODEL_OLD) if ALT_MODEL_OLD.exists()
+          else (str(DEFAULT_MODEL) if DEFAULT_MODEL.exists() else str(ALT_MODEL_NEW)))
+)
 MODEL_DOWNLOAD_URL = os.environ.get('MODEL_DOWNLOAD_URL') or os.environ.get('MODEL_S3_URL')
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -145,6 +151,9 @@ preprocess = transforms.Compose([
 
 CLASSES = [
     "Battery",
+    "Cables",
+    "Charger",
+    "Earphones",
     "Headphones",
     "Keyboard",
     "Mobile",
