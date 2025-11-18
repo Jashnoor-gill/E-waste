@@ -245,20 +245,28 @@ function setupUi() {
         return;
       }
       const j = await res.json();
-      if (j && j.frame) {
-        const img = document.getElementById('remoteFrameImg');
-        if (img) {
-          // Detect common base64 prefixes to choose MIME safely without decoding.
-          const p = (j.frame || '').slice(0, 8);
-          let mime = 'image/jpeg';
-          if (p.startsWith('PHN2') || p.startsWith('PD94')) mime = 'image/svg+xml';
-          else if (p.startsWith('iVBOR')) mime = 'image/png';
-          else if (p.startsWith('/9j') || p.startsWith('/9j/')) mime = 'image/jpeg';
-          img.src = `data:${mime};base64,${j.frame}`;
-          try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg mime=', mime, 'prefix=', p); } catch(e){}
-          img.style.display = 'block';
+        if (j) {
+          const img = document.getElementById('remoteFrameImg');
+          if (!img) return;
+          // If backend returned a presigned URL (S3), prefer that
+          if (j.presignedUrl) {
+            img.src = j.presignedUrl;
+            img.style.display = 'block';
+            try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg via presignedUrl', j.presignedUrl); } catch(e){}
+            return;
+          }
+          if (j.frame) {
+            // Detect common base64 prefixes to choose MIME safely without decoding.
+            const p = (j.frame || '').slice(0, 8);
+            let mime = 'image/jpeg';
+            if (p.startsWith('PHN2') || p.startsWith('PD94')) mime = 'image/svg+xml';
+            else if (p.startsWith('iVBOR')) mime = 'image/png';
+            else if (p.startsWith('/9j') || p.startsWith('/9j/')) mime = 'image/jpeg';
+            img.src = `data:${mime};base64,${j.frame}`;
+            img.style.display = 'block';
+            try { console.log('fetchAndUpdatePiFrame -> set remoteFrameImg mime=', mime, 'prefix=', p); } catch(e){}
+          }
         }
-      }
     } catch (e) { console.warn('fetchAndUpdatePiFrame failed', e); }
   }
 

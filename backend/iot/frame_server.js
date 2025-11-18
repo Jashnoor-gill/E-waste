@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { loadTokens } from '../utils/deviceTokens.js';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const router = express.Router();
 router.use(cors());
@@ -54,7 +56,35 @@ router.post('/upload_frame', (req, res) => {
       }
     }
 
-    frames.set(device_id, entry);
+    // If S3 is configured, upload the frame to S3 and store the key instead
+    const S3_BUCKET = (process.env.S3_BUCKET || '').trim();
+    if (S3_BUCKET) {
+      try {
+        // Initialize S3 client with optional region & credentials from env
+        const s3 = new S3Client({ region: process.env.S3_REGION || undefined, credentials: (process.env.S3_KEY && process.env.S3_SECRET) ? { accessKeyId: process.env.S3_KEY, secretAccessKey: process.env.S3_SECRET } : undefined });
+        const buf = Buffer.from(frame, 'base64');
+        const key = `frames/${device_id}/${ts}.jpg`;
+        const cmd = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: buf, ContentType: 'image/jpeg' });
+        // Fire-and-forget upload but await result to ensure availability
+        s3.send(cmd).then(() => {
+          entry.s3Key = key;
+          // remove large in-memory frame to save RAM if desired
+          if ((process.env.KEEP_FRAMES_IN_MEMORY || '').toLowerCase() !== 'true') {
+            entry.frame = null;
+          }
+          frames.set(device_id, entry);
+        }).catch((err) => {
+          console.warn('S3 upload failed', err && err.message ? err.message : err);
+          // fallback: keep frame in-memory
+          frames.set(device_id, entry);
+        });
+      } catch (err) {
+        console.warn('S3 upload error', err && err.message ? err.message : err);
+        frames.set(device_id, entry);
+      }
+    } else {
+      frames.set(device_id, entry);
+    }
 
     // notify SSE clients listening for this device
     const set = sseClients.get(device_id);
@@ -81,6 +111,26 @@ router.get('/latest_frame', (req, res) => {
   if (!deviceId) return res.status(400).json({ error: 'device_id_required' });
   const entry = frames.get(deviceId);
   if (!entry) return res.status(404).json({ error: 'not_found' });
+  // If frame was uploaded to S3, return a presigned URL instead of raw base64
+  const S3_BUCKET = (process.env.S3_BUCKET || '').trim();
+  if (S3_BUCKET && entry.s3Key) {
+    try {
+      const s3 = new S3Client({ region: process.env.S3_REGION || undefined, credentials: (process.env.S3_KEY && process.env.S3_SECRET) ? { accessKeyId: process.env.S3_KEY, secretAccessKey: process.env.S3_SECRET } : undefined });
+      const getCmd = new GetObjectCommand({ Bucket: S3_BUCKET, Key: entry.s3Key });
+      // signed URL valid for short time (default 60s), can be configured via env
+      const expires = parseInt(process.env.S3_PRESIGNED_EXPIRES || '60', 10);
+      return getSignedUrl(s3, getCmd, { expiresIn: expires }).then((url) => {
+        return res.json({ device_id: deviceId, ts: entry.ts, presignedUrl: url, filepath: entry.filepath });
+      }).catch((err) => {
+        console.warn('Failed to create presigned URL', err && err.message ? err.message : err);
+        // fallback to returning base64 if present
+        return res.json({ device_id: deviceId, ts: entry.ts, frame: entry.frame, filepath: entry.filepath });
+      });
+    } catch (err) {
+      console.warn('Presign error', err && err.message ? err.message : err);
+      return res.json({ device_id: deviceId, ts: entry.ts, frame: entry.frame, filepath: entry.filepath });
+    }
+  }
   return res.json({ device_id: deviceId, ts: entry.ts, frame: entry.frame, filepath: entry.filepath });
 });
 
