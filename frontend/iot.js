@@ -50,7 +50,19 @@ async function runLocalModelOnImg(imgEl) {
 }
 // If set to true (or '1'/'true') in a site-level config, the frontend will
 // completely disable use of the local laptop webcam and only use Pi feeds.
-const DISABLE_LOCAL_WEBCAM = (typeof window !== 'undefined' && (window.DISABLE_LOCAL_WEBCAM === true || window.DISABLE_LOCAL_WEBCAM === '1' || window.DISABLE_LOCAL_WEBCAM === 'true'));
+// Allow an override via localStorage `ENABLE_LOCAL_WEBCAM` so users can toggle
+// local webcam at runtime (stored as 'true'|'false'). Default keeps local
+// webcam disabled for deployed sites unless explicitly enabled.
+const DISABLE_LOCAL_WEBCAM = (function(){
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ENABLE_LOCAL_WEBCAM');
+      if (stored !== null) return !(stored === 'true');
+      return (window.DISABLE_LOCAL_WEBCAM === true || window.DISABLE_LOCAL_WEBCAM === '1' || window.DISABLE_LOCAL_WEBCAM === 'true');
+    }
+  } catch (e) { /* ignore localStorage errors */ }
+  return true;
+})();
 
 // UI helper: attach handlers if buttons exist
 function setupUi() {
