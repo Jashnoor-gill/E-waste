@@ -7,3 +7,6 @@ Model/Model/*.pth filter=lfs diff=lfs merge=lfs -text
 Model.zip filter=lfs diff=lfs merge=lfs -text
 Model/** filter=lfs diff=lfs merge=lfs -text
 Final_DP/Model/** filter=lfs diff=lfs merge=lfs -text
+pi_model/** filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
