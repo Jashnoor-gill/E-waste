@@ -39,8 +39,9 @@ async def startup_load_model():
         ok = download_model_if_needed(MODEL_PATH)
         if ok:
             try:
-                # load model to verify it loads correctly
-                _ = load_model(MODEL_PATH)
+                # load model and store in the global `model` so service reports loaded=True
+                global model
+                model = load_model(MODEL_PATH)
                 app.state.load_error = None
                 print(f'Model loaded successfully from {MODEL_PATH}')
             except Exception as e:
