@@ -56,7 +56,9 @@ function normalizeModelServiceUrl(raw) {
     return s.replace(/\/$/, '');
   } catch (e) { return s; }
 }
-const RAW_MODEL_SERVICE = process.env.MODEL_SERVICE_URL || null;
+// Default to the deployed model service if env var not provided so the
+// main backend forwards model requests to the running model_service.
+const RAW_MODEL_SERVICE = process.env.MODEL_SERVICE_URL || 'https://e-waste-1-agt0.onrender.com/infer';
 const MODEL_SERVICE_NORMALIZED = normalizeModelServiceUrl(RAW_MODEL_SERVICE);
 // store last model service health check result on app for debug endpoint
 app.set('modelServiceHealth', null);
