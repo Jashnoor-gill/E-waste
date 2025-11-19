@@ -25,6 +25,7 @@
     ,"multer": "^1.4.4"
     ,"@aws-sdk/client-s3": "^3.520.0"
     ,"@aws-sdk/s3-request-presigner": "^3.520.0"
+    ,"mongodb": "^5.8.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

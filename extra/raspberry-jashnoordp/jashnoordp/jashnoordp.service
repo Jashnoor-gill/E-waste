@@ -1,0 +1,19 @@
+[Unit]
+Description=Jashnoor E-Waste Pi Client
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/jashnoordp
+Environment=PATH=/home/pi/jashnoordp/venv/bin:/usr/bin:/bin
+# Example envs; set your backend and token here or in a separate env file
+Environment=EW_BACKEND_URL=http://127.0.0.1:5000
+Environment=DEVICE_NAME=raspi-1
+# Environment=DEVICE_TOKEN=your_token_here
+ExecStart=/home/pi/jashnoordp/venv/bin/python /home/pi/jashnoordp/pi_client.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

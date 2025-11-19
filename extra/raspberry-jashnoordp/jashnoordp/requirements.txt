@@ -1,0 +1,9 @@
+python-socketio[client]==5.11.0
+requests==2.31.0
+# Optional for OpenCV capture
+opencv-python-headless==4.8.1.78
+# Optional for TFLite inference
+# tflite-runtime; prefer installing platform-specific wheel on Raspberry Pi
+# Pillow and numpy for preprocessing
+Pillow==10.0.1
+numpy==1.26.2

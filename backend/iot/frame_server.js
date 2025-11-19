@@ -6,6 +6,7 @@ import os from 'os';
 import { loadTokens } from '../utils/deviceTokens.js';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 
 const router = express.Router();
 router.use(cors());
@@ -56,35 +57,67 @@ router.post('/upload_frame', (req, res) => {
       }
     }
 
-    // If S3 is configured, upload the frame to S3 and store the key instead
-    const S3_BUCKET = (process.env.S3_BUCKET || '').trim();
-    if (S3_BUCKET) {
-      try {
-        // Initialize S3 client with optional region & credentials from env
-        const s3 = new S3Client({ region: process.env.S3_REGION || undefined, credentials: (process.env.S3_KEY && process.env.S3_SECRET) ? { accessKeyId: process.env.S3_KEY, secretAccessKey: process.env.S3_SECRET } : undefined });
-        const buf = Buffer.from(frame, 'base64');
-        const key = `frames/${device_id}/${ts}.jpg`;
-        const cmd = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: buf, ContentType: 'image/jpeg' });
-        // Fire-and-forget upload but await result to ensure availability
-        s3.send(cmd).then(() => {
-          entry.s3Key = key;
-          // remove large in-memory frame to save RAM if desired
-          if ((process.env.KEEP_FRAMES_IN_MEMORY || '').toLowerCase() !== 'true') {
-            entry.frame = null;
+        // Decide storage backend: gridfs (MongoDB) or S3 (existing) or memory/disk
+        const FRAME_STORAGE = (process.env.FRAME_STORAGE || '').toLowerCase();
+        const S3_BUCKET = (process.env.S3_BUCKET || '').trim();
+
+        if (FRAME_STORAGE === 'gridfs') {
+          // Use MongoDB GridFS to store frames. This is asynchronous — ensure upload completes before setting frames map.
+          try {
+            const uri = process.env.MONGODB_URI;
+            if (!uri) throw new Error('MONGODB_URI not configured for GridFS');
+            // create a client per process and reuse
+            if (!global.__ew_mongo_client) {
+              global.__ew_mongo_client = new MongoClient(uri);
+              await global.__ew_mongo_client.connect();
+              global.__ew_db = global.__ew_mongo_client.db();
+              global.__ew_gridfs = new GridFSBucket(global.__ew_db, { bucketName: process.env.GRIDFS_BUCKET || 'frames' });
+            }
+            const bucket = global.__ew_gridfs;
+            const buf = Buffer.from(frame, 'base64');
+            const filename = `${device_id}-${ts}.jpg`;
+            const uploadStream = bucket.openUploadStream(filename, { metadata: { device_id, ts }, contentType: 'image/jpeg' });
+            uploadStream.end(buf, () => {
+              try {
+                entry.gridfsId = uploadStream.id.toString();
+                if ((process.env.KEEP_FRAMES_IN_MEMORY || '').toLowerCase() !== 'true') entry.frame = null;
+                frames.set(device_id, entry);
+              } catch (e) {
+                console.warn('GridFS upload finish handler error', e && e.message ? e.message : e);
+                frames.set(device_id, entry);
+              }
+            });
+          } catch (err) {
+            console.warn('GridFS upload error', err && err.message ? err.message : err);
+            frames.set(device_id, entry);
           }
+        } else if (S3_BUCKET) {
+          try {
+            // Initialize S3 client with optional region & credentials from env
+            const s3 = new S3Client({ region: process.env.S3_REGION || undefined, credentials: (process.env.S3_KEY && process.env.S3_SECRET) ? { accessKeyId: process.env.S3_KEY, secretAccessKey: process.env.S3_SECRET } : undefined });
+            const buf = Buffer.from(frame, 'base64');
+            const key = `frames/${device_id}/${ts}.jpg`;
+            const cmd = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: buf, ContentType: 'image/jpeg' });
+            // Fire-and-forget upload but await result to ensure availability
+            s3.send(cmd).then(() => {
+              entry.s3Key = key;
+              // remove large in-memory frame to save RAM if desired
+              if ((process.env.KEEP_FRAMES_IN_MEMORY || '').toLowerCase() !== 'true') {
+                entry.frame = null;
+              }
+              frames.set(device_id, entry);
+            }).catch((err) => {
+              console.warn('S3 upload failed', err && err.message ? err.message : err);
+              // fallback: keep frame in-memory
+              frames.set(device_id, entry);
+            });
+          } catch (err) {
+            console.warn('S3 upload error', err && err.message ? err.message : err);
+            frames.set(device_id, entry);
+          }
+        } else {
           frames.set(device_id, entry);
-        }).catch((err) => {
-          console.warn('S3 upload failed', err && err.message ? err.message : err);
-          // fallback: keep frame in-memory
-          frames.set(device_id, entry);
-        });
-      } catch (err) {
-        console.warn('S3 upload error', err && err.message ? err.message : err);
-        frames.set(device_id, entry);
-      }
-    } else {
-      frames.set(device_id, entry);
-    }
+        }
 
     // notify SSE clients listening for this device
     const set = sseClients.get(device_id);
@@ -112,7 +145,13 @@ router.get('/latest_frame', (req, res) => {
   const entry = frames.get(deviceId);
   if (!entry) return res.status(404).json({ error: 'not_found' });
   // If frame was uploaded to S3, return a presigned URL instead of raw base64
+  const FRAME_STORAGE = (process.env.FRAME_STORAGE || '').toLowerCase();
   const S3_BUCKET = (process.env.S3_BUCKET || '').trim();
+  if (FRAME_STORAGE === 'gridfs' && entry.gridfsId) {
+    // Return the backend streaming URL for the gridfs file
+    const url = `/api/frame/get/${entry.gridfsId}`;
+    return res.json({ device_id: deviceId, ts: entry.ts, gridfsId: entry.gridfsId, url, filepath: entry.filepath });
+  }
   if (S3_BUCKET && entry.s3Key) {
     try {
       const s3 = new S3Client({ region: process.env.S3_REGION || undefined, credentials: (process.env.S3_KEY && process.env.S3_SECRET) ? { accessKeyId: process.env.S3_KEY, secretAccessKey: process.env.S3_SECRET } : undefined });
@@ -132,6 +171,38 @@ router.get('/latest_frame', (req, res) => {
     }
   }
   return res.json({ device_id: deviceId, ts: entry.ts, frame: entry.frame, filepath: entry.filepath });
+});
+
+// GET /get/:id - stream a GridFS file by id
+router.get('/get/:id', async (req, res) => {
+  const id = req.params.id;
+  if (!id) return res.status(400).send('id required');
+  try {
+    if (!global.__ew_gridfs) {
+      const uri = process.env.MONGODB_URI;
+      if (!uri) return res.status(500).send('MONGODB_URI not configured');
+      if (!global.__ew_mongo_client) {
+        global.__ew_mongo_client = new MongoClient(uri);
+        await global.__ew_mongo_client.connect();
+        global.__ew_db = global.__ew_mongo_client.db();
+      }
+      global.__ew_gridfs = new GridFSBucket(global.__ew_db, { bucketName: process.env.GRIDFS_BUCKET || 'frames' });
+    }
+    const bucket = global.__ew_gridfs;
+    const oid = ObjectId.isValid(id) ? new ObjectId(id) : null;
+    if (!oid) return res.status(400).send('invalid id');
+    const downloadStream = bucket.openDownloadStream(oid);
+    // set generic image content-type (stored in metadata if available)
+    res.setHeader('Content-Type', 'image/jpeg');
+    downloadStream.on('error', (err) => {
+      console.warn('GridFS download error', err && err.message ? err.message : err);
+      return res.status(404).send('not found');
+    });
+    downloadStream.pipe(res);
+  } catch (err) {
+    console.error('GET /get/:id error', err && err.message ? err.message : err);
+    return res.status(500).send('server_error');
+  }
 });
 
 // GET /devices -> list known device ids
