@@ -69,6 +69,29 @@ MODEL_PATH = os.environ.get('MODEL_PATH') or (
 MODEL_DOWNLOAD_URL = os.environ.get('MODEL_DOWNLOAD_URL') or os.environ.get('MODEL_S3_URL')
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# If the configured MODEL_PATH points to a repo-local `pi_model/...` path that
+# doesn't exist in the deployment (common when large models were removed from
+# the branch), but a MODEL_DOWNLOAD_URL is provided, download the release
+# asset into a local `downloaded_models/` folder and use that file as
+# `MODEL_PATH` so the service can load it.
+try:
+    if MODEL_DOWNLOAD_URL and MODEL_PATH and 'pi_model' in MODEL_PATH and not Path(MODEL_PATH).exists():
+        parsed_name = None
+        try:
+            parsed_name = Path(urlparse(MODEL_DOWNLOAD_URL).path).name
+        except Exception:
+            parsed_name = None
+        if not parsed_name:
+            parsed_name = 'downloaded_model.pt'
+        fallback_dir = Path(__file__).resolve().parents[1] / 'downloaded_models'
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        fallback_target = fallback_dir / parsed_name
+        # Use this fallback target as the effective MODEL_PATH for loading
+        MODEL_PATH = str(fallback_target)
+        print(f"MODEL_PATH overridden to fallback download target: {MODEL_PATH}")
+except Exception as _e:
+    print('Error while computing fallback MODEL_PATH:', _e)
+
 
 def load_model(path: str):
     if not Path(path).exists():
