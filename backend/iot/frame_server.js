@@ -32,7 +32,7 @@ router.get('/health', (req, res) => res.json({ ok: true }));
 
 // POST /upload_frame
 // body: { device_id: 'raspi-1', frame: '<base64-jpeg-or-png>' }
-router.post('/upload_frame', (req, res) => {
+router.post('/upload_frame', async (req, res) => {
   try {
     if (!verifyDeviceToken(req)) return res.status(403).json({ error: 'missing_or_invalid_device_token' });
     const { device_id, frame } = req.body || {};
