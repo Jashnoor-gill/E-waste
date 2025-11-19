@@ -1,0 +1,8 @@
+python-socketio>=5.0.0
+requests
+pillow
+torch>=1.8.0
+torchvision
+# Optional for camera capture
+opencv-python
+numpy

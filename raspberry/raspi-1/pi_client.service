@@ -1,0 +1,15 @@
+[Unit]
+Description=E-Waste Pi Client Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/raspberry/raspi-1
+ExecStart=/usr/bin/python3 /home/pi/raspberry/raspi-1/pi_client.py --server https://e-waste-backend-3qxc.onrender.com --name raspi-1 --token <DEVICE_TOKEN>
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

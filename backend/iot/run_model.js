@@ -40,14 +40,21 @@ router.post('/run-model', async (req, res) => {
       return res.json({ label, confidence });
     }
 
-    // Prefer to forward run_model to a connected device
+    // Prefer to forward run_model to a connected device.
+    // Default preference: if a device named 'raspi-1' is connected, use it.
     const devices = req.app.get('devices');
     let targetSocketId = null;
     const deviceName = body.deviceName;
-    if (deviceName && devices && devices.has(deviceName)) targetSocketId = devices.get(deviceName);
-    else if (devices) {
-      const first = devices.entries().next();
-      if (!first.done) targetSocketId = first.value[1];
+    if (deviceName && devices && devices.has(deviceName)) {
+      targetSocketId = devices.get(deviceName);
+    } else if (devices) {
+      // Prefer explicitly registered device 'raspi-1' when available
+      if (devices.has('raspi-1')) {
+        targetSocketId = devices.get('raspi-1');
+      } else {
+        const first = devices.entries().next();
+        if (!first.done) targetSocketId = first.value[1];
+      }
     }
 
     if (targetSocketId) {
