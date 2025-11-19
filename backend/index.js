@@ -195,8 +195,8 @@ app.put('/api/bins/:id', async (req, res) => {
   res.json(bin);
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT} (bound to 0.0.0.0)`);
   // Log model service URL info for easier debugging
   try {
     if (MODEL_SERVICE_NORMALIZED) console.log(`Model service (normalized): ${MODEL_SERVICE_NORMALIZED}`);
@@ -221,6 +221,19 @@ server.listen(PORT, () => {
       app.set('modelServiceHealth', { ok: false, error: String(err), ts: Date.now() });
     }
   })();
+});
+
+// Log server errors (useful in hosting environments that may prevent binding)
+server.on('error', (err) => {
+  console.error('Server error:', err && err.stack ? err.stack : err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err && err.stack ? err.stack : err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason && reason.stack ? reason.stack : reason);
 });
 
 // Debug endpoint: return normalized model service URL and last health-check result (no secrets)
