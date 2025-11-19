@@ -12,118 +12,9 @@ const socket = ioClient(SOCKET_URL);
 // Expose to window for quick debugging
 window.iotSocket = socket;
 // Client-side model (optional): lazy-load TensorFlow.js + MobileNet for on-page predictions
-let __localModel = null;
-async function loadLocalModel() {
-  if (__localModel) return __localModel;
-  // Helper to inject a plain script tag and wait for load
-  function loadScript(src, isModule = false) {
-    return new Promise((resolve, reject) => {
-      try {
-        const s = document.createElement('script');
-        s.src = src;
-        if (isModule) s.type = 'module';
-        s.onload = () => resolve();
-        s.onerror = (e) => reject(new Error('Failed to load script: ' + src));
-        document.head.appendChild(s);
-      } catch (e) { reject(e); }
-    });
-  }
-
-  try {
-    // Try UMD script approach so `window.tf` is available for mobilenet UMD builds
-    const tfUrl = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js';
-    const mnUrl = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js';
-    // If tf is already present, skip loading
-    if (typeof window !== 'undefined' && !window.tf) {
-      await loadScript(tfUrl);
-    }
-    // If mobilenet global not present, load its UMD script
-    if (typeof window !== 'undefined' && !window.mobilenet) {
-      await loadScript(mnUrl);
-    }
-    if (typeof window !== 'undefined' && window.mobilenet) {
-      __localModel = await window.mobilenet.load();
-      console.log('Local MobileNet (UMD) loaded');
-      return __localModel;
-    }
-  } catch (err) {
-    console.warn('UMD script load failed, falling back to ESM imports', err);
-    // continue to ESM fallback below
-  }
-
-  // ESM fallback: try dynamic import of ESM bundles
-  try {
-    const tf = await import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.esm.js');
-    const mobilenet = await import('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.esm.js');
-    // mobilenet module exposes `load` function
-    __localModel = await mobilenet.load();
-    console.log('Local MobileNet (ESM) loaded');
-    return __localModel;
-  } catch (err) {
-    console.warn('Failed to load local model via ESM', err);
-    __localModel = null;
-    throw err;
-  }
-}
-
-async function runLocalModelOnImg(imgEl) {
-  if (!imgEl) throw new Error('No image element');
-  try {
-    const model = await loadLocalModel();
-    if (!model) throw new Error('Model not available');
-    // classify returns [{className, probability}, ...]
-    const preds = await model.classify(imgEl, 3);
-    if (!preds || preds.length === 0) return renderModelResult({ label: 'Unknown', confidence: 0, source: 'local' });
-    const top = preds[0];
-    const label = top.className || String(top.label || 'Unknown');
-    const confidence = typeof top.probability === 'number' ? top.probability : (top.prob || 0);
-    renderModelResult({ label, confidence, source: 'local' });
-    return { label, confidence };
-  } catch (err) {
-    console.warn('Local model failed', err);
-    renderModelResult({ error: 'local_model_failed', source: 'local' });
-    return null;
-  }
-}
-// Read whether the user prefers using the server model (persisted in localStorage)
-function getUseServerModel() {
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('USE_SERVER_MODEL');
-      if (stored !== null) return stored === 'true';
-      return !!window.USE_SERVER_MODEL;
-    }
-  } catch (e) { /* ignore */ }
-  return false;
-}
-
-// Send captured base64 image to the server model service and render the result.
-async function callServerModel(imageB64) {
-  if (!imageB64) throw new Error('No image provided to server model');
-  const svc = (typeof window !== 'undefined' && window.MODEL_SERVICE_URL) ? window.MODEL_SERVICE_URL : ORIGIN;
-  const url = `${svc.replace(/\/$/, '')}/infer`;
-  try {
-    showModelLoading(true);
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image_b64: imageB64 }) });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => `Status ${res.status}`);
-      throw new Error(`Model service error ${res.status}: ${txt.slice(0,200)}`);
-    }
-    const j = await res.json();
-    // Model service returns { label, confidence }
-    if (j && (j.label || typeof j.confidence !== 'undefined')) {
-      renderModelResult({ label: j.label || 'Unknown', confidence: (typeof j.confidence === 'number') ? j.confidence : (j.conf || 0), source: 'server' });
-      showModelLoading(false);
-      return j;
-    }
-    throw new Error('Unexpected response from model service');
-  } catch (err) {
-    console.error('callServerModel failed', err);
-    renderModelResult({ error: err.message || 'server_model_failed', source: 'server' });
-    showModelLoading(false);
-    return null;
-  }
-}
+// Local in-browser model and webcam capture removed: device (Pi) is the primary
+// source for captures and inference. Server-side model calls remain available
+// via backend endpoints and the Pi/device flow.
 // If set to true (or '1'/'true') in a site-level config, the frontend will
 // completely disable use of the local laptop webcam and only use Pi feeds.
 // Allow an override via localStorage `ENABLE_LOCAL_WEBCAM` so users can toggle
@@ -163,29 +54,9 @@ function setupUi() {
     // Hide/disable all local webcam controls when local webcam is disabled
     [webcamStartBtn, webcamStopBtn, webcamCaptureBtn, webcamOneClickBtn].forEach(b => { if (b) { b.style.display = 'none'; b.disabled = true; } });
     // Hide local video element if present
-    try { const v = document.getElementById(VIDEO_ID); if (v) v.style.display = 'none'; } catch(e){}
-  } else {
-    // Setup local webcam UI labels and handlers
-    try {
-      if (webcamStartBtn) webcamStartBtn.textContent = 'Start Local Webcam';
-      if (webcamCaptureBtn) { webcamCaptureBtn.textContent = 'Capture (local)'; webcamCaptureBtn.disabled = true; }
-      if (webcamOneClickBtn) webcamOneClickBtn.textContent = 'One-Click Capture';
-    } catch (e) {}
-
-    // Toggle handler: start or stop local webcam depending on current state
-    const toggleLocalWebcam = () => {
-      const v = document.getElementById(VIDEO_ID);
-      if (v && v.srcObject) return stopWebcam();
-      return startWebcam();
-    };
-
-    if (webcamStartBtn) webcamStartBtn.addEventListener('click', toggleLocalWebcam);
-    if (webcamStopBtn) webcamStopBtn.addEventListener('click', stopWebcam);
-    // Capture from running webcam
-    if (webcamCaptureBtn) webcamCaptureBtn.addEventListener('click', captureFromWebcam);
-    // One-click button: start->capture->stop
-    if (webcamOneClickBtn) webcamOneClickBtn.addEventListener('click', oneClickCapture);
+    try { const v = document.getElementById('webcamVideo'); if (v) v.style.display = 'none'; } catch(e){}
   }
+  // Local browser webcam support removed; captures come from the Pi device.
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
   if (startPiCameraBtn) startPiCameraBtn.addEventListener('click', () => startPiCamera());
@@ -242,24 +113,7 @@ function setupUi() {
     hint.textContent = 'Camera features are disabled on non-secure pages. Preview camera functionality will work on the deployed site (HTTPS) or on localhost.';
     try { const container = document.getElementById('iotImageContainer') || document.body; container.insertBefore(hint, container.firstChild); } catch (e) { /* ignore */ }
   }
-  // wire prominent test button if present
-  const testBtn = document.getElementById('testCameraBtn');
-  if (testBtn) testBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    try {
-      // Ensure camera started, then do one-click capture
-      const v = document.getElementById(VIDEO_ID);
-      if (!v || !v.srcObject) {
-        await startWebcam();
-        // small delay for camera warmup
-        await new Promise(r => setTimeout(r, 300));
-      }
-      await oneClickCapture();
-    } catch (err) {
-      console.error('Test camera failed', err);
-      alert('Test camera failed: ' + (err.message || err));
-    }
-  });
+  // Test camera button removed or inert when using device-only captures.
 
   socket.on('connect', () => {
     console.log('IoT socket connected', socket.id);
@@ -493,8 +347,6 @@ function setupUi() {
     try {
       const hasPi = await piHasRecentFrame(deviceId, 10);
       if (hasPi) {
-        // stop local webcam if running
-        try { if (_webcamStream) { stopWebcam(); } } catch(e){}
         // start Pi feed
         startPiFeed(deviceId);
       } else {
@@ -510,12 +362,11 @@ function setupUi() {
       }
     } catch (err) {
       console.warn('startPreferredCamera failed', err);
-      // fallback: start webcam
-      try { if (!DISABLE_LOCAL_WEBCAM) await startWebcam(); } catch(e){}
+      // fallback removed: local webcam support disabled in this build
     }
   }
   // Expose helpers so autostart and other scripts can call them from global scope
-  try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; window.startWebcam = startWebcam; window.stopWebcam = stopWebcam; } catch(e) {}
+  try { window.startPreferredCamera = startPreferredCamera; window.startPiFeed = startPiFeed; window.stopPiFeed = stopPiFeed; } catch(e) {}
 }
 
 // Periodic capture loop (frontend-driven) to simulate a live Pi camera without changing Pi code.
@@ -559,261 +410,6 @@ function stopPiCamera() {
 }
 
 try { window.startPiCamera = startPiCamera; window.stopPiCamera = stopPiCamera; } catch(e) {}
-
-// Browser webcam helpers --------------------------------------------------
-let _webcamStream = null;
-const VIDEO_ID = 'webcamVideo';
-let lastCapturedB64 = null; // store last captured image for explicit run
-let _webcamCaptureInFlight = false;
-
-// Compress a canvas to a JPEG dataURL, reducing quality and dimensions
-// until the resulting base64 payload is under `maxChars` or until
-// minimum quality/width is reached. Returns a dataURL string.
-async function compressCanvasToDataUrl(origCanvas, maxChars, startQuality = 0.6) {
-  const startWidth = origCanvas.width;
-  const startHeight = origCanvas.height;
-  const minQuality = 0.4;
-  const minWidth = 240;
-  let quality = startQuality;
-  let width = startWidth;
-  let height = startHeight;
-
-  while (true) {
-    const tmp = document.createElement('canvas');
-    tmp.width = width;
-    // preserve aspect ratio
-    tmp.height = Math.round((width / startWidth) * startHeight);
-    const ctx = tmp.getContext('2d');
-    ctx.drawImage(origCanvas, 0, 0, tmp.width, tmp.height);
-    let dataUrl;
-    try {
-      dataUrl = tmp.toDataURL('image/jpeg', quality);
-    } catch (e) {
-      // fallback to default encoding if error
-      dataUrl = tmp.toDataURL('image/jpeg');
-    }
-    const b64 = dataUrl.split(',')[1] || '';
-    if (!maxChars || b64.length <= maxChars) return dataUrl;
-
-    // try decreasing quality first
-    if (quality > minQuality + 0.001) {
-      quality = Math.max(minQuality, quality - 0.1);
-      // try again with smaller quality
-      continue;
-    }
-
-    // then decrease width
-    if (width > minWidth + 10) {
-      width = Math.max(minWidth, Math.round(width * 0.8));
-      // reset quality to startQuality when reducing dimensions
-      quality = startQuality;
-      continue;
-    }
-
-    // cannot reduce further, return current
-    return dataUrl;
-  }
-}
-
-async function startWebcam() {
-  try {
-    const v = document.getElementById(VIDEO_ID);
-    if (!v) return alert('No video element found on page');
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const msg = 'Camera not available: your browser does not support getUserMedia or page is not served via HTTPS/localhost.';
-      console.error('startWebcam failed - getUserMedia unavailable');
-      return alert(msg + '\n\nTip: open this page over HTTPS or localhost and allow camera permission.');
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
-    v.srcObject = stream;
-    v.style.display = 'block';
-    _webcamStream = stream;
-    // Update UI: enable capture button and update start button appearance
-    try {
-      const startBtn = document.getElementById('webcamStartBtn');
-      const captureBtn = document.getElementById('webcamCaptureBtn');
-      if (startBtn) { startBtn.textContent = 'Stop Local Webcam'; startBtn.style.background = '#e8f5e9'; }
-      if (captureBtn) { captureBtn.disabled = false; }
-    } catch (e) { /* ignore UI update errors */ }
-  } catch (err) {
-    console.error('startWebcam failed', err);
-    alert('Unable to access camera: ' + (err.message || err));
-  }
-}
-
-function stopWebcam() {
-  try {
-    const v = document.getElementById(VIDEO_ID);
-    if (v) v.style.display = 'none';
-    if (_webcamStream) {
-      _webcamStream.getTracks().forEach(t => t.stop());
-      _webcamStream = null;
-    }
-    // Update UI: disable capture button and restore start button text
-    try {
-      const startBtn = document.getElementById('webcamStartBtn');
-      const captureBtn = document.getElementById('webcamCaptureBtn');
-      if (startBtn) { startBtn.textContent = 'Start Local Webcam'; startBtn.style.background = ''; }
-      if (captureBtn) { captureBtn.disabled = true; }
-    } catch (e) { /* ignore UI update errors */ }
-  } catch (err) {
-    console.error('stopWebcam failed', err);
-  }
-}
-
-async function captureFromWebcam() {
-  if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
-  if (_webcamCaptureInFlight) return; // prevent duplicate captures
-  _webcamCaptureInFlight = true;
-  const v = document.getElementById(VIDEO_ID);
-  const imgContainer = document.getElementById('iotImageContainer');
-  if (!v || !v.srcObject) return alert('Camera not started');
-  // Capture frame and show it, but do not run the model automatically.
-  showModelLoading(false);
-  // draw current frame to canvas (resize to limit payload)
-  // Use smaller defaults to avoid sending very large base64 payloads that can trigger 413 errors
-  const MAX_WIDTH = 600;
-  const origW = v.videoWidth || 1280;
-  const origH = v.videoHeight || 720;
-  const scale = Math.min(1, MAX_WIDTH / origW);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(origW * scale);
-  canvas.height = Math.round(origH * scale);
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-  // convert to JPEG base64 with reduced quality to avoid large payloads
-  // Use a max payload size (in base64 chars) to avoid 413s; allow override via window.FRAME_MAX_CHARS
-  const MAX_CHARS = (typeof window !== 'undefined' && window.FRAME_MAX_CHARS) ? window.FRAME_MAX_CHARS : 700000;
-  const dataUrl = await compressCanvasToDataUrl(canvas, MAX_CHARS, 0.6);
-  const b64 = dataUrl.split(',')[1];
-  if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
-  // store captured image and enable Run Model button
-  lastCapturedB64 = b64;
-  // If local model usage is enabled, run prediction on the captured image element
-  try {
-    const useLocal = (typeof window !== 'undefined' && (window.USE_LOCAL_MODEL === undefined || window.USE_LOCAL_MODEL === true));
-    if (useLocal) {
-      const imgEl = imgContainer && imgContainer.querySelector('img');
-      if (imgEl) runLocalModelOnImg(imgEl).catch(e => console.warn('runLocalModelOnImg failed', e));
-    }
-    // If user prefers server model, call server inference on this captured image
-    try {
-      if (getUseServerModel && getUseServerModel()) {
-        // run server model in background (do not block UI)
-        callServerModel(b64).catch(e => console.warn('callServerModel failed (captureFromWebcam)', e));
-      }
-    } catch (e) { /* ignore */ }
-  } catch (e) { /* ignore */ }
-  // Persist the captured frame to the backend so it can be shown to other clients and via the Pi feed endpoints
-  try {
-    if (window.persistFrameToServer) {
-      window.persistFrameToServer('browser', b64).catch(e => console.warn('persistFrameToServer failed for webcam capture', e));
-    }
-  } catch (e) { /* ignore */ }
-  try {
-    const runBtn = document.getElementById('iotRunModelBtn');
-    if (runBtn) runBtn.disabled = false;
-  } catch (e) { /* ignore */ }
-  // Stop the webcam after capture so the camera doesn't stay running
-  try { stopWebcam(); } catch (e) { /* ignore */ }
-  _webcamCaptureInFlight = false;
-}
-
-// One-click flow: start camera, capture one frame, send it, then stop camera.
-async function oneClickCapture() {
-  if (DISABLE_LOCAL_WEBCAM) return alert('Local webcam usage is disabled by site configuration.');
-  if (_webcamCaptureInFlight) return;
-  _webcamCaptureInFlight = true;
-  const v = document.getElementById(VIDEO_ID);
-  const imgContainer = document.getElementById('iotImageContainer');
-  try {
-    showModelLoading(true);
-    // start camera (will reuse if already started)
-    if (!v || !v.srcObject) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        const msg = 'Camera not available: your browser does not support getUserMedia or page is not served via HTTPS/localhost.';
-        console.error('oneClickCapture failed - getUserMedia unavailable');
-        throw new Error(msg + ' Tip: open this page over HTTPS or localhost and allow camera permission.');
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
-      v.srcObject = stream;
-      // small delay to allow camera to warm up
-      await new Promise(r => setTimeout(r, 250));
-    }
-
-    // draw frame (use smaller defaults to avoid large payloads)
-    const MAX_WIDTH = 600;
-    const origW = v.videoWidth || 1280;
-    const origH = v.videoHeight || 720;
-    const scale = Math.min(1, MAX_WIDTH / origW);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(origW * scale);
-    canvas.height = Math.round(origH * scale);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-    const MAX_CHARS = (typeof window !== 'undefined' && window.FRAME_MAX_CHARS) ? window.FRAME_MAX_CHARS : 700000;
-    const dataUrl = await compressCanvasToDataUrl(canvas, MAX_CHARS, 0.6);
-    const b64 = dataUrl.split(',')[1];
-    if (imgContainer) imgContainer.innerHTML = `<img src="${dataUrl}" style="max-width:100%; border-radius:8px;"/>`;
-    // Persist the captured image so it's available via the frame server for display
-    try {
-      if (window.persistFrameToServer) {
-        await window.persistFrameToServer('browser', b64);
-      }
-    } catch (e) { console.warn('persistFrameToServer failed in oneClickCapture', e); }
-
-    // Run local model if enabled
-    try {
-      const useLocal = (typeof window !== 'undefined' && (window.USE_LOCAL_MODEL === undefined || window.USE_LOCAL_MODEL === true));
-      if (useLocal) {
-        const imgEl = imgContainer && imgContainer.querySelector('img');
-        if (imgEl) await runLocalModelOnImg(imgEl);
-      }
-    } catch (e) { console.warn('runLocalModelOnImg failed in oneClickCapture', e); }
-    // If user prefers server-side model, call it directly and skip device run
-    if (getUseServerModel && getUseServerModel()) {
-      try {
-        await callServerModel(b64);
-      } catch (e) { console.warn('callServerModel failed in oneClickCapture', e); }
-      showModelLoading(false);
-      return;
-    }
-
-    const body = { image_b64: b64, replySocketId: socket.id };
-    // Prefer device-side model run: request the device to run model (device should be connected via socket.io)
-    const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceName, replySocketId: socket.id }) });
-    // handle non-JSON error pages (e.g. 413) gracefully
-    if (!res.ok) {
-      const txt = await res.text().catch(() => `Status ${res.status}`);
-      throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
-    }
-    let data;
-    try { data = await res.json(); }
-    catch (e) {
-      const txt = await res.text().catch(() => 'Invalid JSON response');
-      throw new Error('Invalid JSON response: ' + txt.slice(0,200));
-    }
-    if (data && data.result) renderModelResult(data.result);
-    showModelLoading(false);
-  } catch (err) {
-    console.error('oneClickCapture failed', err);
-    alert('Capture failed: ' + (err.message || err));
-    showModelLoading(false);
-  } finally {
-    // stop camera if we started it here
-    try {
-      const v2 = document.getElementById(VIDEO_ID);
-      if (v2 && v2.srcObject) {
-        const tracks = v2.srcObject.getTracks();
-        tracks.forEach(t => t.stop());
-        v2.srcObject = null;
-      }
-    } catch (e) { /* ignore */ }
-    _webcamCaptureInFlight = false;
-  }
-}
 
 function renderModelResult(result) {
   const rc = document.getElementById('iotModelResult');
@@ -888,44 +484,20 @@ async function requestRunModel() {
     showModelLoading(true);
     // If mock enabled, synthesize a model result locally
     if (getMockEnabled && getMockEnabled()) {
-      // choose a random category from our demo set
       const cats = ['mobile','pcb','cable','charger','headphones'];
       const pick = cats[Math.floor(Math.random()*cats.length)];
       const confidence = Math.random() * 0.4 + 0.6; // 60-100%
-      // small delay to simulate processing
       await new Promise(r => setTimeout(r, 600 + Math.floor(Math.random()*800)));
       renderModelResult({ label: pick, confidence, source: 'mock' });
       showModelLoading(false);
       return;
     }
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-    let body = { replySocketId: socket.id };
-    // If there's a captured image from the webcam, send it explicitly.
-    if (lastCapturedB64) {
-        // Persist the captured image first so it is visible on the site, then request device-side model run.
-        try {
-          if (window.persistFrameToServer) {
-            await window.persistFrameToServer('browser', lastCapturedB64);
-          }
-        } catch (e) { console.warn('persistFrameToServer failed before runModel', e); }
-        // If user prefers server-side model, call server inference directly
-        try {
-          if (getUseServerModel && getUseServerModel()) {
-            await callServerModel(lastCapturedB64);
-            // clear stored image after using it
-            lastCapturedB64 = null;
-            try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
-            showModelLoading(false);
-            return;
-          }
-        } catch (e) { console.warn('callServerModel failed in requestRunModel pre-check', e); }
 
-        const deviceName2 = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
-        body = { deviceName: deviceName2, replySocketId: socket.id };
-        // clear stored image after uploading
-        lastCapturedB64 = null;
-        try { const runBtn = document.getElementById('iotRunModelBtn'); if (runBtn) runBtn.disabled = true; } catch(e){}
-    }
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    // Prefer device-side run; include optional device name if provided in UI
+    const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : undefined;
+    const body = { replySocketId: socket.id, ...(deviceName ? { deviceName } : {}) };
+
     const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
@@ -935,17 +507,15 @@ async function requestRunModel() {
     try { data = await res.json(); }
     catch (e) { const txt = await res.text().catch(()=> 'Invalid JSON'); throw new Error('Invalid JSON response: '+txt.slice(0,200)); }
     console.log('run-model requested', data);
-    // Render result returned directly or wrapped in { result: { ... } }
     try {
       if (data && data.result) renderModelResult(data.result);
       else if (data) renderModelResult(data);
-    } catch (err) {
-      console.warn('Failed to render model result', err);
-    }
+    } catch (err) { console.warn('Failed to render model result', err); }
     showModelLoading(false);
   } catch (err) {
     console.error('run model request failed', err);
     alert('Run model request failed: ' + err.message);
+    showModelLoading(false);
   }
 }
 

@@ -30,13 +30,7 @@
   <!-- IoT / Camera control panel (Bin User) -->
   <section id="iotPanel" class="iot-panel" style="padding:1rem; max-width:1100px; margin:1rem auto">
     <div class="iot-controls" style="margin-top:0.5rem">
-      <video id="webcamVideo" autoplay playsinline style="display:none; width:100%; max-width:640px; border-radius:8px; background:#000"></video>
-      <div style="display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap">
-        <button id="webcamStartBtn" class="btn">Start Camera</button>
-        <button id="webcamStopBtn" class="btn">Stop Camera</button>
-        <button id="webcamCaptureBtn" class="btn">Capture</button>
-        <button id="webcamOneClickBtn" class="btn">One-click Capture & Run</button>
-      </div>
+      <!-- Local browser camera removed: captures are performed by the Pi device only -->
 
       <div style="display:flex; gap:1rem; margin-top:1rem; align-items:flex-start; flex-wrap:wrap">
         <div id="iotImageContainer" style="flex:1; min-width:220px"></div>
@@ -78,44 +72,7 @@
       If set to 'true' then local webcam is enabled; otherwise disabled.
       This lets you switch between Pi feed and local webcam at runtime without redeploy.
     */
-    (function(){
-      try {
-        const stored = localStorage.getItem('ENABLE_LOCAL_WEBCAM');
-        const useLocal = stored === null ? false : (stored === 'true');
-        // disable local webcam when useLocal is false
-        window.DISABLE_LOCAL_WEBCAM = !useLocal;
-        document.addEventListener('DOMContentLoaded', () => {
-          const panel = document.getElementById('iotPanel');
-          if (!panel) return;
-          const wrap = document.createElement('div');
-          wrap.style.margin = '0.5rem 0';
-          wrap.innerHTML = `<label style="display:inline-flex;align-items:center;gap:0.5rem"><input type="checkbox" id="localWebcamToggle"> Use Local Webcam</label>`;
-          // model source toggle: default to Local (unchecked means use local model)
-          const modelWrap = document.createElement('div');
-          modelWrap.style.marginTop = '0.25rem';
-          modelWrap.innerHTML = `<label style="display:inline-flex;align-items:center;gap:0.5rem"><input type="checkbox" id="useServerModelToggle"> Use Server Model</label>`;
-          panel.insertBefore(modelWrap, panel.firstChild);
-          const mb = document.getElementById('useServerModelToggle');
-          if (mb) {
-            const storedModel = localStorage.getItem('USE_SERVER_MODEL');
-            const useServer = storedModel === 'true' ? true : false;
-            mb.checked = useServer;
-            mb.addEventListener('change', () => {
-              try { localStorage.setItem('USE_SERVER_MODEL', mb.checked ? 'true' : 'false'); window.USE_SERVER_MODEL = mb.checked; } catch (e) {}
-            });
-          }
-          panel.insertBefore(wrap, panel.firstChild);
-          const cb = document.getElementById('localWebcamToggle');
-          if (!cb) return;
-          cb.checked = useLocal;
-          cb.addEventListener('change', () => {
-            try { localStorage.setItem('ENABLE_LOCAL_WEBCAM', cb.checked ? 'true' : 'false'); } catch (e) {}
-            // reload so frontend wiring reads the new value and updates UI
-            window.location.reload();
-          });
-        });
-      } catch(e) { /* ignore localStorage errors */ }
-    })();
+    <!-- Local webcam and model-toggle removed. Device (Pi) is the primary capture and inference source. -->
   </script>
   <script type="module">
     import { renderBinUserDashboard } from './dashboard.js';
