@@ -11,6 +11,7 @@ import os
 import requests
 import shutil
 from urllib.parse import urlparse
+import hashlib
 
 try:
     import boto3
@@ -263,6 +264,47 @@ async def health():
         pass
 
     return {"ok": False, "model_path": None, "error": getattr(app.state, 'load_error', None)}
+
+
+@app.get('/model-info')
+async def model_info():
+    """Return basic information about the model file the service will use.
+
+    Returns JSON with:
+    - model_path: configured effective path
+    - exists: whether the file exists on disk
+    - size: file size in bytes (if exists)
+    - sha256: sha256 hex digest of the file (if exists)
+    - loaded: whether the model is currently loaded in memory
+    - load_error: last recorded load error (if any)
+    """
+    try:
+        p = Path(MODEL_PATH)
+        info = {
+            'model_path': MODEL_PATH,
+            'exists': p.exists(),
+            'size': None,
+            'sha256': None,
+            'loaded': model is not None,
+            'load_error': getattr(app.state, 'load_error', None)
+        }
+        if p.exists():
+            try:
+                info['size'] = p.stat().st_size
+            except Exception:
+                info['size'] = None
+            # compute sha256 in streaming fashion
+            try:
+                h = hashlib.sha256()
+                with open(p, 'rb') as f:
+                    for chunk in iter(lambda: f.read(8192), b''):
+                        h.update(chunk)
+                info['sha256'] = h.hexdigest()
+            except Exception as e:
+                info['sha256'] = None
+        return info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compute model info: {e}")
 
 
 # Helpful developer GET routes to avoid confusing 404s in the browser console.
