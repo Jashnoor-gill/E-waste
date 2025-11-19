@@ -16,6 +16,24 @@ import Bin from './models/Bin.js';
 
 dotenv.config();
 
+// Early process-level handlers and startup logging so hosting platforms
+// (Render, etc.) surface binding or boot errors in logs before the app
+// proceeds to create servers. Placing these handlers early helps capture
+// errors that occur during module initialization.
+process.on('uncaughtException', (err) => {
+  console.error('Early uncaught exception:', err && err.stack ? err.stack : err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Early unhandled rejection:', reason && reason.stack ? reason.stack : reason);
+});
+
+console.log('Starting backend process', {
+  NODE_ENV: process.env.NODE_ENV || null,
+  PORT: process.env.PORT || null,
+  MODEL_SERVICE_URL: process.env.MODEL_SERVICE_URL || null,
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
