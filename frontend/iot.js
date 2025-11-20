@@ -1,5 +1,5 @@
 import { io as ioClient } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
-import { getMockEnabled, setMockEnabled, getBins } from './api.js';
+import { getMockEnabled, setMockEnabled, getBins, getStats, getDepositSeries } from './api.js';
 
 // Connect to backend socket.io. Use the current page origin so local dev points to local backend
 const DEFAULT_BACKEND = 'https://e-waste-backend-3qxc.onrender.com';
@@ -48,6 +48,8 @@ function setupUi() {
   const piDeviceIdInput = document.getElementById('piDeviceIdInput');
   const checkFillBtn = document.getElementById('checkFillBtn');
   const binLevelResult = document.getElementById('binLevelResult');
+  const mockMetrics = document.getElementById('mockMetrics');
+  const depositCanvas = document.getElementById('depositChart');
   const mockToggleBtn = document.getElementById('mockToggleBtn');
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
@@ -139,6 +141,43 @@ function setupUi() {
       if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Request failed: ${String(e)}</div>`;
     }
   });
+
+  // If mock mode is enabled, render mock metrics and deposit-over-time chart
+  async function renderMockMetricsIfNeeded() {
+    try {
+      if (!(typeof getMockEnabled === 'function' && getMockEnabled())) return;
+      if (!mockMetrics && !depositCanvas) return;
+      // Load mock stats and deposit series
+      const [stats, series] = await Promise.all([ (typeof getStats === 'function' ? getStats() : Promise.resolve({})), (typeof getDepositSeries === 'function' ? getDepositSeries() : Promise.resolve({ labels: [], data: [] })) ]);
+      if (mockMetrics) {
+        const html = `
+          <div class="card" style="padding:0.75rem">
+            <div><strong>Points:</strong> ${stats.pointsEarned ?? 'N/A'}</div>
+            <div><strong>Level (global):</strong> ${stats.totalEwasteKg ? stats.totalEwasteKg.toFixed(1) + ' kg' : 'N/A'}</div>
+            <div><strong>CO₂ Saved:</strong> ${stats.co2SavedKg ?? 'N/A'} kg</div>
+            <div><strong>Energy Saved:</strong> ${stats.energySavedKWh ?? 'N/A'} kWh</div>
+          </div>`;
+        mockMetrics.innerHTML = html;
+      }
+      if (depositCanvas && window.Chart && series && Array.isArray(series.labels)) {
+        try {
+          // destroy previous chart if any
+          if (depositCanvas._chart) depositCanvas._chart.destroy();
+          const ctx = depositCanvas.getContext('2d');
+          depositCanvas._chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: series.labels,
+              datasets: [{ label: 'Deposits (kg)', data: series.data, borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,0.08)', fill: true }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: true }, y: { beginAtZero: true } } }
+          });
+        } catch (e) { console.warn('Failed to render deposit chart', e); }
+      }
+    } catch (e) { /* ignore */ }
+  }
+  // Kick off rendering when UI is ready
+  try { renderMockMetricsIfNeeded(); } catch (e) {}
   if (mockToggleBtn) {
     // initialize mock state from localStorage (if present) or from api.getMockEnabled
     try {

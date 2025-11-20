@@ -53,6 +53,12 @@
         <div id="remoteFrameContainer" style="margin-top:0.75rem;">
           <img id="remoteFrameImg" alt="Pi Camera Feed" style="max-width:100%; border-radius:8px; display:none; background:#000" />
         </div>
+        <div id="mockMetricsContainer" style="margin-top:0.75rem; display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap">
+          <div id="mockMetrics" style="flex:1; min-width:200px"></div>
+          <div style="flex:2; min-width:300px">
+            <canvas id="depositChart" style="width:100%; max-width:700px; height:220px"></canvas>
+          </div>
+        </div>
       </div>
 
       <div id="iotStatus" style="margin-top:0.5rem; color:#666">Status: Unknown</div>

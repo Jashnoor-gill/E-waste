@@ -36,6 +36,8 @@ export async function getStats() {
       totalEwasteKg: 128.7,
       totalEvents: 342,
       co2SavedKg: 320.5,
+      energySavedKWh: 450.2,
+      pointsEarned: 1240,
       byCategory: {
         mobile: 34.2,
         pcb: 22.5,
@@ -51,6 +53,24 @@ export async function getStats() {
     });
   }
   const res = await fetch(withMock(`${API_BASE}/stats`));
+  return res.json();
+}
+
+export async function getDepositSeries() {
+  if (getMockEnabled()) {
+    // Mock deposit-over-time series (last 12 months)
+    const labels = [];
+    const data = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; --i) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(d.toLocaleString(undefined, { month: 'short', year: 'numeric' }));
+      // random but plausible monthly deposit in kg
+      data.push(Math.round((Math.random() * 30 + 10) * 10) / 10);
+    }
+    return Promise.resolve({ labels, data });
+  }
+  const res = await fetch(withMock(`${API_BASE}/stats/deposit-series`));
   return res.json();
 }
 
