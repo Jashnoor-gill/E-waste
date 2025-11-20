@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import time
+import tempfile
 
 try:
     import socketio
@@ -160,10 +161,50 @@ def on_capture(payload):
                 pass
             return
 
-        # Read file and base64-encode
+        # Read file and compress with OpenCV (preferred), then base64-encode
         try:
-            with open(image_path, 'rb') as f:
-                b64 = base64.b64encode(f.read()).decode('ascii')
+            b64 = None
+            try:
+                import cv2
+                # read, resize to 320x240, encode as jpeg with quality 50
+                img_cv = cv2.imread(image_path)
+                if img_cv is not None:
+                    resized = cv2.resize(img_cv, (320, 240))
+                    ret, buf = cv2.imencode('.jpg', resized, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+                    if ret:
+                        b64 = base64.b64encode(buf.tobytes()).decode('ascii')
+                    else:
+                        raise Exception('cv2.imencode failed')
+                else:
+                    raise Exception('cv2.imread failed')
+            except Exception:
+                # OpenCV path failed — fallback to Pillow-based resize/compress
+                try:
+                    from PIL import Image
+                    # Configurable via env vars
+                    max_w = int(os.environ.get('IMAGE_MAX_WIDTH', '640'))
+                    max_h = int(os.environ.get('IMAGE_MAX_HEIGHT', '480'))
+                    quality = int(os.environ.get('IMAGE_JPEG_QUALITY', '75'))
+                    img = Image.open(image_path).convert('RGB')
+                    img.thumbnail((max_w, max_h), Image.LANCZOS)
+                    tmpf = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                    tmpf_name = tmpf.name
+                    tmpf.close()
+                    img.save(tmpf_name, format='JPEG', quality=quality)
+                    with open(tmpf_name, 'rb') as f:
+                        b64 = base64.b64encode(f.read()).decode('ascii')
+                    try:
+                        os.remove(tmpf_name)
+                    except Exception:
+                        pass
+                except Exception:
+                    # Pillow not available or processing failed — send original file
+                    with open(image_path, 'rb') as f:
+                        b64 = base64.b64encode(f.read()).decode('ascii')
+
+            if not b64:
+                raise Exception('Failed to produce base64 image payload')
+
             payload_out = {'requestId': requestId, 'image_b64': b64, 'device': args.name}
             sio.emit('iot-photo', payload_out)
             print('Emitted iot-photo', {'requestId': requestId, 'len_image_b64': len(b64)})
