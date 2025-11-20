@@ -136,7 +136,21 @@ def main():
 
     print('Starting Pi client, connecting to', args.server)
     try:
-        sio.connect(args.server, transports=['websocket'])
+        # Allow socketio to pick the best transport (will try websocket then polling).
+        # Previously we forced websocket-only. That fails if `websocket-client` is missing.
+        # Let the client fallback gracefully so deployments work even if the optional
+        # websocket client package is not installed.
+        try:
+            sio.connect(args.server)
+        except Exception as e:
+            print('Connection error (initial):', e)
+            # As a last-resort, attempt connect with explicit transports including polling
+            try:
+                sio.connect(args.server, transports=['websocket', 'polling'])
+            except Exception as e2:
+                print('Connection error (fallback):', e2)
+                time.sleep(5)
+                sys.exit(1)
         sio.wait()
     except Exception as e:
         print('Connection error:', e)

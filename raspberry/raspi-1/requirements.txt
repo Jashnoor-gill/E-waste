@@ -6,3 +6,4 @@ torchvision
 # Optional for camera capture
 opencv-python
 numpy
+websocket-client>=1.6.0
