@@ -120,6 +120,59 @@ def on_run_model(payload):
         print('Failed to emit model result:', e)
 
 
+@sio.on('capture')
+def on_capture(payload):
+    """Handle 'capture' events from the server: capture an image and emit it as `iot-photo`.
+    Expects payload { requestId, metadata? } and emits { requestId, image_b64, device }.
+    """
+    try:
+        print('capture event received:', payload)
+        requestId = payload.get('requestId') if isinstance(payload, dict) else None
+        # Try to use the helper capture script if present
+        image_path = None
+        try:
+            from capture_image import capture as capture_fn
+            # capture() should return a filesystem path or raise on failure
+            image_path = capture_fn()
+            print('capture_image returned path:', image_path)
+        except Exception as e:
+            # Fallback: try OpenCV quick capture
+            try:
+                import cv2
+                tmp_path = os.path.join(os.path.dirname(__file__), f'capture_{int(time.time())}.jpg')
+                cap = cv2.VideoCapture(0)
+                ret, frame = cap.read()
+                cap.release()
+                if ret:
+                    cv2.imwrite(tmp_path, frame)
+                    image_path = tmp_path
+                    print('OpenCV captured image to', tmp_path)
+                else:
+                    print('OpenCV capture failed')
+            except Exception as e2:
+                print('Capture fallback failed:', e, e2)
+
+        if not image_path or not os.path.exists(image_path):
+            print('No image captured; emitting error response')
+            try:
+                sio.emit('iot-photo', {'requestId': requestId, 'error': 'capture_failed', 'device': args.name})
+            except Exception:
+                pass
+            return
+
+        # Read file and base64-encode
+        try:
+            with open(image_path, 'rb') as f:
+                b64 = base64.b64encode(f.read()).decode('ascii')
+            payload_out = {'requestId': requestId, 'image_b64': b64, 'device': args.name}
+            sio.emit('iot-photo', payload_out)
+            print('Emitted iot-photo', {'requestId': requestId, 'len_image_b64': len(b64)})
+        except Exception as e:
+            print('Failed to emit iot-photo:', e)
+    except Exception as e:
+        print('capture handler error:', e)
+
+
 @sio.on('disconnect')
 def on_disconnect():
     print('Disconnected from server')
