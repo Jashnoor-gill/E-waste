@@ -156,7 +156,9 @@ async function renderBinUserDashboard() {
   // Create charts after DOM is ready
   setTimeout(() => {
     if (userEvents.length > 0) {
-      createDepositsChart('depositsChart', userEvents);
+      // prefer an existing `depositChart` canvas (used on Bin User page)
+      const depositsCanvasId = document.getElementById('depositChart') ? 'depositChart' : 'depositsChart';
+      createDepositsChart(depositsCanvasId, userEvents);
       if (Object.keys(userStats.categoryBreakdown).length > 0) {
         createCategoryChart('categoryChart', userStats.categoryBreakdown);
       }
