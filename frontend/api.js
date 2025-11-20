@@ -17,12 +17,13 @@ import { authFetch } from './auth.js';
 
 export async function getBins() {
   if (getMockEnabled()) {
-    // lightweight mock bins containing various e-waste item types
+    // richer mock bins used by collector/dashboard pages
+    const now = new Date();
     return Promise.resolve([
-      { id: 'bin-1', name: 'Electronics Drop 1', location: 'Library', items: ['mobile', 'charger', 'headphones'], capacityKg: 50, fillKg: 12.4 },
-      { id: 'bin-2', name: 'Lab Bin A', location: 'Lab Block', items: ['pcb', 'cable', 'charger'], capacityKg: 80, fillKg: 36.2 },
-      { id: 'bin-3', name: 'Hostel Bin', location: 'Hostel 3', items: ['mobile', 'cable'], capacityKg: 60, fillKg: 8.1 },
-      { id: 'bin-4', name: 'Office Bin', location: 'Admin Office', items: ['pc', 'charger', 'headphones'], capacityKg: 40, fillKg: 21.0 }
+      { _id: 'bin-1', id: 'bin-1', qrCode: 'BINLIB1', location: 'Library', items: ['phones','chargers'], capacity: 50, currentWeight: 12.4, level: 24.8, status: 'available', lastDistanceCm: 60, lastUpdated: new Date(now.getTime() - 1000*60*30).toISOString() },
+      { _id: 'bin-2', id: 'bin-2', qrCode: 'BINLABA', location: 'Lab Block', items: ['pcb','cable'], capacity: 80, currentWeight: 56.0, level: 70.0, status: 'collecting', lastDistanceCm: 25, lastUpdated: new Date(now.getTime() - 1000*60*5).toISOString() },
+      { _id: 'bin-3', id: 'bin-3', qrCode: 'BINHOST3', location: 'Hostel 3', items: ['cable'], capacity: 60, currentWeight: 6.0, level: 10.0, status: 'available', lastDistanceCm: 72, lastUpdated: new Date(now.getTime() - 1000*60*60*4).toISOString() },
+      { _id: 'bin-4', id: 'bin-4', qrCode: 'BINOFF1', location: 'Admin Office', items: ['pc','chargers'], capacity: 40, currentWeight: 36.0, level: 90.0, status: 'full', lastDistanceCm: 12, lastUpdated: new Date(now.getTime() - 1000*60*10).toISOString() }
     ]);
   }
   const res = await fetch(withMock(`${API_BASE}/bins`));
@@ -34,8 +35,10 @@ export async function getStats() {
     // Mock stats and chart-ready series for dashboard
     return Promise.resolve({
       totalEwasteKg: 128.7,
+      totalEwaste: 128.7,
       totalEvents: 342,
       co2SavedKg: 320.5,
+      co2Saved: 320.5,
       energySavedKWh: 450.2,
       pointsEarned: 1240,
       byCategory: {
@@ -78,9 +81,13 @@ export async function getEvents() {
   if (getMockEnabled()) {
     const now = new Date();
     return Promise.resolve([
-      { id: 'ev-1', user: 'demo_user', binId: 'bin-1', category: 'mobile', weightKg: 0.2, timestamp: new Date(now.getTime() - 1000*60*60).toISOString() },
-      { id: 'ev-2', user: 'demo_user', binId: 'bin-2', category: 'pcb', weightKg: 1.2, timestamp: new Date(now.getTime() - 1000*60*30).toISOString() },
-      { id: 'ev-3', user: 'demo_user', binId: 'bin-3', category: 'cable', weightKg: 0.15, timestamp: new Date(now.getTime() - 1000*60*10).toISOString() }
+      // deposits (user-facing)
+      { id: 'd-1', type: 'deposit', user: 'demo_user', bin: 'bin-1', category: 'phones', amount: 0.2, timestamp: new Date(now.getTime() - 1000*60*60).toISOString() },
+      { id: 'd-2', type: 'deposit', user: 'demo_user', bin: 'bin-2', category: 'pcb', amount: 1.2, timestamp: new Date(now.getTime() - 1000*60*30).toISOString() },
+      { id: 'd-3', type: 'deposit', user: 'demo_user', bin: 'bin-3', category: 'cable', amount: 0.15, timestamp: new Date(now.getTime() - 1000*60*10).toISOString() },
+      // collection events (collector-facing)
+      { id: 'c-1', type: 'collection', collector: 'collector_1', bin: 'bin-2', amount: 30.5, timestamp: new Date(now.getTime() - 1000*60*60*24*3).toISOString() },
+      { id: 'c-2', type: 'collection', collector: 'collector_1', bin: 'bin-4', amount: 20.0, timestamp: new Date(now.getTime() - 1000*60*60*24*10).toISOString() }
     ]);
   }
   const res = await fetch(withMock(`${API_BASE}/events`));
