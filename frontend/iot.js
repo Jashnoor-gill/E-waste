@@ -46,6 +46,8 @@ function setupUi() {
   const startPiCameraBtn = document.getElementById('startPiCameraBtn');
   const stopPiCameraBtn = document.getElementById('stopPiCameraBtn');
   const piDeviceIdInput = document.getElementById('piDeviceIdInput');
+  const checkFillBtn = document.getElementById('checkFillBtn');
+  const binLevelResult = document.getElementById('binLevelResult');
   const mockToggleBtn = document.getElementById('mockToggleBtn');
 
   if (captureBtn) captureBtn.addEventListener('click', requestCapture);
@@ -61,6 +63,82 @@ function setupUi() {
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
   if (startPiCameraBtn) startPiCameraBtn.addEventListener('click', () => startPiCamera());
   if (stopPiCameraBtn) stopPiCameraBtn.addEventListener('click', () => stopPiCamera());
+  if (checkFillBtn) checkFillBtn.addEventListener('click', async () => {
+    try {
+      const id = (piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value.trim() : '';
+      if (!id) {
+        alert('Please enter a Device ID or Bin identifier first');
+        return;
+      }
+      if (typeof getMockEnabled === 'function' && getMockEnabled()) {
+        // Use frontend mock data
+        try {
+          if (binLevelResult) binLevelResult.innerHTML = '<div class="card" style="padding:0.75rem">Checking fill level (mock)...</div>';
+          const bins = await getBins();
+          const b = bins.find(x => (x.id && x.id === id) || (x._id && x._id === id) || (x.qrCode && x.qrCode === id));
+          if (!b) {
+            if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Mock: Bin not found: ${id}</div>`;
+            return;
+          }
+          // determine level: prefer `fillKg` and `capacityKg` if present, else `level` if present
+          let levelVal = null;
+          if (typeof b.fillKg === 'number' && typeof b.capacityKg === 'number' && b.capacityKg > 0) levelVal = (b.fillKg / b.capacityKg) * 100.0;
+          else if (typeof b.level === 'number') levelVal = b.level;
+          else levelVal = Math.round((Math.random() * 60 + 10) * 10) / 10; // random fallback 10-70%
+
+          // approximate distance based on level (empty ~80cm, full ~10cm)
+          const empty = (b.empty_distance_cm && typeof b.empty_distance_cm === 'number') ? b.empty_distance_cm : 80.0;
+          const full = (b.full_distance_cm && typeof b.full_distance_cm === 'number') ? b.full_distance_cm : 10.0;
+          const dist = Math.max(full, Math.min(empty, empty - (levelVal/100.0) * (empty - full)));
+
+          const levelStr = `${Number(levelVal).toFixed(1)}%`;
+          const distStr = `${Number(dist).toFixed(1)} cm`;
+          const status = (levelVal >= 95) ? 'full' : (levelVal >= 70 ? 'collecting' : 'available');
+          const updated = new Date().toLocaleString();
+          if (binLevelResult) binLevelResult.innerHTML = `
+            <div class="card" style="padding:0.75rem">
+              <div><strong>Bin:</strong> ${b.id || b._id || id}</div>
+              <div><strong>Level:</strong> ${levelStr}</div>
+              <div><strong>Distance:</strong> ${distStr}</div>
+              <div><strong>Status:</strong> ${status}</div>
+              <div style="font-size:0.85rem; color:#666"><strong>Updated:</strong> ${updated} (mock)</div>
+            </div>
+          `;
+          return;
+        } catch (e) {
+          console.warn('Mock checkFill failed', e);
+          if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Mock request failed: ${String(e)}</div>`;
+          return;
+        }
+      }
+
+      const url = `${ORIGIN.replace(/\/$/, '')}/api/bins/${encodeURIComponent(id)}/level`;
+      if (binLevelResult) binLevelResult.innerHTML = '<div class="card" style="padding:0.75rem">Checking fill level...</div>';
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => `Status ${res.status}`);
+        if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Error: ${txt}</div>`;
+        return;
+      }
+      const j = await res.json();
+      const level = (typeof j.level === 'number') ? `${j.level.toFixed(1)}%` : (j.level == null ? 'N/A' : String(j.level));
+      const dist = (typeof j.distance_cm === 'number') ? `${j.distance_cm.toFixed(1)} cm` : (j.distance_cm == null ? 'N/A' : String(j.distance_cm));
+      const status = j.status || 'unknown';
+      const updated = j.lastUpdated ? new Date(j.lastUpdated).toLocaleString() : 'unknown';
+      if (binLevelResult) binLevelResult.innerHTML = `
+        <div class="card" style="padding:0.75rem">
+          <div><strong>Bin:</strong> ${j.bin_id}</div>
+          <div><strong>Level:</strong> ${level}</div>
+          <div><strong>Distance:</strong> ${dist}</div>
+          <div><strong>Status:</strong> ${status}</div>
+          <div style="font-size:0.85rem; color:#666"><strong>Updated:</strong> ${updated}</div>
+        </div>
+      `;
+    } catch (e) {
+      console.warn('checkFillBtn handler error', e);
+      if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Request failed: ${String(e)}</div>`;
+    }
+  });
   if (mockToggleBtn) {
     // initialize mock state from localStorage (if present) or from api.getMockEnabled
     try {

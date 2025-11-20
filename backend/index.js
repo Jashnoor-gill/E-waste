@@ -36,7 +36,12 @@ console.log('Starting backend process', {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+// Increase `maxHttpBufferSize` so large base64 image payloads emitted by
+// devices (via socket.emit) do not cause the engine to drop the connection.
+// Default is ~1MB which is too small for full-size images encoded as base64.
+// Make this configurable via env var `SOCKET_MAX_HTTP_BUFFER_BYTES` (bytes).
+const DEFAULT_MAX_BUFFER = parseInt(process.env.SOCKET_MAX_HTTP_BUFFER_BYTES || String(50 * 1024 * 1024), 10);
+const io = new Server(server, { cors: { origin: '*' }, maxHttpBufferSize: DEFAULT_MAX_BUFFER });
 
 // Device registry for connected IoT devices (key: deviceName, value: socketId)
 const devices = new Map();
@@ -98,8 +103,11 @@ import iotRoutes from './iot/iot.js';
 import runModelRouter from './iot/run_model.js';
 app.use('/api/iot', runModelRouter);
 app.use('/api/iot', iotRoutes);
-import frameRouter from './iot/frame_server.js';
+import frameRouter, { attachFrames } from './iot/frame_server.js';
 app.use('/api/frame', frameRouter);
+// expose the in-memory frames map from the frame router to the app so
+// other modules (socket handlers) can update/read the latest frames.
+try { attachFrames(app); } catch (e) { /* ignore */ }
 import modelResultsRouter from './iot/model_results.js';
 app.use('/api/iot', modelResultsRouter);
 import authRoutes from './routes/auth.js';
@@ -154,6 +162,13 @@ io.on('connection', (socket) => {
   // Relay photo events from device -> only to requester (if mapped)
   socket.on('iot-photo', (payload) => {
     try {
+      // Log approximate size for debugging large payload disconnects
+      try {
+        const size = payload && (payload.image_b64 ? String(payload.image_b64).length : (payload.frame ? String(payload.frame).length : null));
+        console.log('iot-photo received. approx payload size chars:', size);
+      } catch (e) { /* ignore logging errors */ }
+    } catch (e) {}
+    try {
       const rid = payload && payload.requestId;
       if (rid && requestMap.has(rid)) {
         const mapping = requestMap.get(rid) || {};
@@ -167,6 +182,17 @@ io.on('connection', (socket) => {
       }
       // fallback: broadcast
       io.emit('iot-photo', payload);
+      // If the device sent a base64 frame (image), persist it in the in-memory
+      // frames map so the `/api/frame/latest_frame` endpoint can return it.
+      try {
+        const framesMap = app.get('frames');
+        // payload may include different keys: `frame`, `image_b64` or `photo`
+        const device = payload && (payload.device || payload.device_id || payload.deviceId || payload.name || null);
+        const frameB64 = payload && (payload.frame || payload.image_b64 || payload.photo || null);
+        if (device && frameB64 && framesMap) {
+          framesMap.set(device, { frame: frameB64, ts: Date.now() });
+        }
+      } catch (e) { /* non-fatal */ }
     } catch (err) { console.error('iot-photo relay error', err); }
   });
 

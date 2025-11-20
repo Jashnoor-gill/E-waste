@@ -1,0 +1,18 @@
+[Unit]
+Description=E-waste Raspberry Pi Ultrasonic Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+# Run as the pi user by default; change if needed
+User=pi
+WorkingDirectory=/home/pi/E-waste/raspberry/raspi-1
+# Load environment variables (copy the example to /etc/default/raspi-ultrasonic)
+EnvironmentFile=/etc/default/raspi-ultrasonic
+# ExecStart should use the venv Python
+ExecStart=/home/pi/E-waste/raspberry/raspi-1/.venv/bin/python /home/pi/E-waste/raspberry/raspi-1/ultrasonic_monitor.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

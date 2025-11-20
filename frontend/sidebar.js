@@ -220,7 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const token = localStorage.getItem('ew_token');
       if (token) {
-        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).then(user => {
+        const base = (window.BACKEND_URL && window.BACKEND_URL.length) ? window.BACKEND_URL.replace(/\/$/, '') : '';
+        fetch(base + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.ok ? r.json() : null).then(user => {
           if (user) {
             const name = user.username || user.name || user.email || 'User';
             document.getElementById('sidebarUserName').textContent = name;

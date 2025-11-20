@@ -14,6 +14,9 @@ const binSchema = new mongoose.Schema({
   }],
   lastUpdated: { type: Date, default: Date.now },
   lastCollected: { type: Date }
+  ,
+  // Last measured distance from ultrasonic sensor (centimeters)
+  lastDistanceCm: { type: Number, default: null }
 });
 
 export default mongoose.model('Bin', binSchema);

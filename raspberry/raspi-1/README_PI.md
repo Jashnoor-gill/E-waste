@@ -40,6 +40,30 @@ sudo journalctl -u raspi-client.service -f
 ./update_and_restart.sh
 ```
 
+## Ultrasonic monitor service
+
+This project includes an ultrasonic monitor script `ultrasonic_monitor.py` and a sample systemd unit `raspi-ultrasonic.service` to run it as a background service.
+
+1) Copy the example env file and edit values (create `/etc/default/raspi-ultrasonic`):
+```bash
+sudo cp raspi-ultrasonic.env.example /etc/default/raspi-ultrasonic
+sudo editor /etc/default/raspi-ultrasonic   # update BIN_UPDATE_URL, BIN_CONFIG_JSON, etc.
+```
+
+2) Install the service and start it:
+```bash
+sudo cp raspi-ultrasonic.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now raspi-ultrasonic.service
+sudo journalctl -u raspi-ultrasonic.service -f
+```
+
+3) Notes:
+- The unit uses the venv at `/home/pi/E-waste/raspberry/raspi-1/.venv` by default. Edit `raspi-ultrasonic.service` if your venv is in a different location.
+- Ensure `gpiozero` and other dependencies are installed in the venv: `.venv/bin/pip install -r requirements.txt`.
+- You can run the monitor standalone for testing: `python3 ultrasonic_monitor.py`.
+
+
 Push this folder to a new GitHub repo
 1) Create an empty repo on GitHub (e.g. `E-waste-raspi-client`) via the website.
 2) From the `raspberry/raspi-1` folder locally:

@@ -18,6 +18,10 @@ import os
 import sys
 import time
 import tempfile
+import threading
+from datetime import datetime
+
+import requests
 
 try:
     import socketio
@@ -42,6 +46,116 @@ except Exception:
 
 
 sio = socketio.Client(reconnection=True, reconnection_attempts=5)
+
+# --- Ultrasonic sensor integration (optional) ---
+try:
+    from gpiozero import DistanceSensor
+except Exception:
+    DistanceSensor = None
+
+# BIN update endpoint: can be a full URL or backend base URL. If you provide
+# just the backend URL, the client will append `/api/bin/update` by default.
+BIN_UPDATE_URL = os.environ.get('BIN_UPDATE_URL') or os.environ.get('BACKEND_BIN_UPDATE_URL') or os.environ.get('BACKEND_URL')
+if BIN_UPDATE_URL and BIN_UPDATE_URL.endswith('/'):
+    BIN_UPDATE_URL = BIN_UPDATE_URL[:-1]
+if BIN_UPDATE_URL and BIN_UPDATE_URL.count('/') <= 3:
+    BIN_UPDATE_URL = BIN_UPDATE_URL + '/api/bin/update'
+
+UPDATE_INTERVAL = float(os.environ.get('UPDATE_INTERVAL', '10'))
+
+# Default bin definitions (override by setting env var BIN_CONFIG_JSON to a JSON list)
+DEFAULT_BINS = [
+    {"id": "bin-1", "trigger": 23, "echo": 24, "empty_distance_cm": 80.0, "full_distance_cm": 10.0},
+]
+
+def load_bins_config():
+    cfg_json = os.environ.get('BIN_CONFIG_JSON')
+    if cfg_json:
+        try:
+            parsed = json.loads(cfg_json)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception as e:
+            print('Failed to parse BIN_CONFIG_JSON:', e)
+    return DEFAULT_BINS
+
+
+class SensorWrapper:
+    def __init__(self, cfg):
+        self.id = cfg.get('id')
+        self.trigger = cfg.get('trigger')
+        self.echo = cfg.get('echo')
+        self.empty_cm = float(cfg.get('empty_distance_cm', 80.0))
+        self.full_cm = float(cfg.get('full_distance_cm', 10.0))
+        self._sensor = None
+        if DistanceSensor is not None and self.trigger is not None and self.echo is not None:
+            try:
+                self._sensor = DistanceSensor(echo=self.echo, trigger=self.trigger)
+            except Exception as e:
+                print(f'[sensor {self.id}] DistanceSensor init failed: {e}')
+
+    def read_distance_cm(self):
+        if self._sensor is None:
+            return None
+        try:
+            d = self._sensor.distance
+            if d is None:
+                return None
+            return float(d) * 100.0
+        except Exception as e:
+            print(f'[sensor {self.id}] read error: {e}')
+            return None
+
+    def compute_fill(self, distance_cm):
+        if distance_cm is None:
+            return None
+        if distance_cm >= self.empty_cm:
+            return 0.0
+        if distance_cm <= self.full_cm:
+            return 100.0
+        span = self.empty_cm - self.full_cm
+        if span <= 0:
+            return 0.0
+        filled = (self.empty_cm - distance_cm) / span * 100.0
+        return max(0.0, min(100.0, filled))
+
+
+def sensor_monitor_thread():
+    bins_cfg = load_bins_config()
+    sensors = [SensorWrapper(cfg) for cfg in bins_cfg]
+    print(f'[ultrasonic] starting monitor for {len(sensors)} sensors; interval={UPDATE_INTERVAL}s; POST->{BIN_UPDATE_URL}')
+    stop = False
+
+    def _handle_stop(signum=None, frame=None):
+        nonlocal stop
+        stop = True
+
+    # thread-local signal handling not reliable; thread respects main process exit
+
+    while not stop:
+        for s in sensors:
+            d = s.read_distance_cm()
+            p = s.compute_fill(d)
+            payload = {
+                'bin_id': s.id,
+                'distance_cm': d,
+                'fill_percent': p,
+                'ts': datetime.utcnow().isoformat() + 'Z',
+            }
+            if BIN_UPDATE_URL:
+                try:
+                    resp = requests.post(BIN_UPDATE_URL, json=payload, timeout=5)
+                    print(f'[ultrasonic] posted {s.id} status={resp.status_code}')
+                except Exception as e:
+                    print(f'[ultrasonic] failed POST for {s.id}: {e}')
+            else:
+                print('[ultrasonic] BIN_UPDATE_URL not set; payload:', payload)
+        # sleep with small increments to be responsive to shutdown
+        slept = 0.0
+        while slept < UPDATE_INTERVAL:
+            time.sleep(0.5)
+            slept += 0.5
+
 
 args = None
 model_path_default = os.path.join(os.path.dirname(__file__), 'Model', 'new_layer4_resnet50_ewaste_traced.pt')
@@ -229,6 +343,12 @@ def main():
     args = parser.parse_args()
 
     print('Starting Pi client, connecting to', args.server)
+    # Start sensor monitor in background (if gpiozero present or configured)
+    try:
+        t = threading.Thread(target=sensor_monitor_thread, name='ultrasonic-monitor', daemon=True)
+        t.start()
+    except Exception as e:
+        print('Failed to start ultrasonic monitor thread:', e)
     try:
         # Allow socketio to pick the best transport (will try websocket then polling).
         # Previously we forced websocket-only. That fails if `websocket-client` is missing.

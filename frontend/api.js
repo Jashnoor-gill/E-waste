@@ -174,7 +174,26 @@ export async function updateStats(data) {
 }
 
 // No-op mock API: keep API surface minimal for compatibility
-export function setMockEnabled(on) { try { /* no-op */ } catch (e) {} }
-export function getMockEnabled() { try { return false; } catch (e) {} return false; }
+export function setMockEnabled(on) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('ENABLE_MOCK', on ? 'true' : 'false');
+    }
+  } catch (e) { /* ignore */ }
+}
+
+export function getMockEnabled() {
+  try {
+    if (typeof window !== 'undefined') {
+      // Explicit global override via page-level config
+      if (typeof window.ENABLE_MOCK !== 'undefined') return !!window.ENABLE_MOCK;
+      const stored = window.localStorage ? window.localStorage.getItem('ENABLE_MOCK') : null;
+      if (stored !== null) return stored === 'true';
+      // Default to true for demo mode when not specified
+      return true;
+    }
+  } catch (e) { /* ignore */ }
+  return true;
+}
 
 // Add more API calls as needed

@@ -230,3 +230,13 @@ router.get('/stream/:deviceId', (req, res) => {
 });
 
 export default router;
+
+// Allow the main application to access the in-memory frames map for
+// best-effort cross-module integration (e.g. receiving frames via socket and
+// serving them via `/api/frame/latest_frame`). This keeps the canonical
+// in-memory store in one place while permitting other modules to read/update it.
+export function attachFrames(app) {
+  try {
+    app.set('frames', frames);
+  } catch (e) { /* ignore */ }
+}
