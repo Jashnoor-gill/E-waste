@@ -1,0 +1,16 @@
+[Unit]
+Description=E-waste Pi Client Service
+After=network.target
+
+[Service]
+Type=simple
+# Run as the pi user by default; change if needed
+User=pi
+WorkingDirectory=/home/pi/E-waste/raspberry/raspi-1
+# ExecStart should use the venv Python
+ExecStart=/home/pi/E-waste/raspberry/raspi-1/.venv/bin/python /home/pi/E-waste/raspberry/raspi-1/pi_client.py --server https://e-waste-backend-3qxc.onrender.com --name raspi-1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
