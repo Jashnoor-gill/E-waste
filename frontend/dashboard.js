@@ -276,13 +276,14 @@ function setupDepositModal(bins) {
 // Helper to render Collector dashboard
 async function renderCollectorDashboard() {
   try {
-  const bins = await getBins();
+  let bins = await getBins();
   dashboardContent.innerHTML = `
     <h2>🚚 Collector Dashboard</h2>
     <div class="dashboard-grid">
       <div class="stat-card">
         <h3>Quick Actions</h3>
         <button id="openCollectModal" class="btn" style="width:100%; margin-top:.5rem">Mark Bin as Collected</button>
+        <button id="checkFillBtn" class="btn" style="width:100%; margin-top:.5rem">Check Fill Level</button>
       </div>
       <div class="stat-card">
         <h3>Filter Bins</h3>
@@ -350,6 +351,25 @@ async function renderCollectorDashboard() {
   };
   renderBins();
   document.getElementById('binStatusFilter').addEventListener('change', (e) => renderBins(e.target.value));
+  // Wire check fill button to refresh bin data from backend and re-render
+  const checkBtn = document.getElementById('checkFillBtn');
+  if (checkBtn) {
+    checkBtn.addEventListener('click', async () => {
+      try {
+        checkBtn.disabled = true;
+        checkBtn.textContent = 'Checking...';
+        bins = await getBins();
+        const status = document.getElementById('binStatusFilter')?.value || 'all';
+        renderBins(status);
+      } catch (err) {
+        console.error('Failed to refresh bins:', err);
+        alert('Unable to check fill levels. See console for details.');
+      } finally {
+        checkBtn.disabled = false;
+        checkBtn.textContent = 'Check Fill Level';
+      }
+    });
+  }
   
   const collectModal = document.getElementById('collectModal');
   const openCollectModalBtn = document.getElementById('openCollectModal');

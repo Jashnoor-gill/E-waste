@@ -176,6 +176,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (dashboardLink && dashboardLink.parentElement) menu.insertBefore(li2, dashboardLink.parentElement.nextSibling);
           else menu.appendChild(li2);
         }
+        // ensure Collector link (robust: check any href containing 'collector')
+        if (!document.querySelector('#sidebar .sidebar-menu a[href*="collector"]')) {
+          const li3 = document.createElement('li');
+          li3.innerHTML = `<a href="dashboard.html#collector"><span class="icon">🚚</span> Collector</a>`;
+          // try to place after Bin User link when possible
+          const binUserLink = document.querySelector('#sidebar .sidebar-menu a[href*="bin-user"]');
+          if (binUserLink && binUserLink.parentElement) menu.insertBefore(li3, binUserLink.parentElement.nextSibling);
+          else menu.appendChild(li3);
+        }
         // Profile link intentionally omitted per UX preference
 
         // Deduplicate Bin User links (keep first occurrence)
