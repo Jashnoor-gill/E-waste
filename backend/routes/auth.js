@@ -76,9 +76,20 @@ router.post('/login', async (req, res) => {
     }
 
     console.log(`[auth.login] user found: id=${u && u._id} username=${u && u.username} passwordPresent=${!!(u && u.password)}`);
-    if (!u || !u.password) {
-      console.warn('[auth.login] missing user or stored password - rejecting login');
-      return res.status(401).json({ error: 'invalid_credentials', detail: 'no_local_password' });
+    // If the user exists but has no stored local password, set one now (user may have been created externally)
+    if (u && !u.password) {
+      try {
+        const hashed = await bcrypt.hash(pwd, 10);
+        u.password = hashed;
+        await u.save();
+        console.log(`[auth.login] set password for existing user id=${u._id}`);
+        const token = jwt.sign({ sub: u._id.toString(), role: u.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+        const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
+        return res.json({ token, user: out });
+      } catch (err) {
+        console.error('auth.login set password error', err && err.stack ? err.stack : err);
+        return res.status(500).json({ error: 'server_error' });
+      }
     }
 
     let ok = false;
