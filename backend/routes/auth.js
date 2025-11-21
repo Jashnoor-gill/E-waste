@@ -45,11 +45,11 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     console.log('[auth.login] payload:', JSON.stringify(req.body).slice(0, 1000));
-    const { identifier, username, password } = req.body;
-    const pwd = password;
+    const { identifier, username, password } = req.body || {};
+    const pwd = typeof password === 'string' ? password : (password ? String(password) : '');
     if ((!identifier && !username) || !pwd) return res.status(400).json({ error: 'identifier_or_username,password required' });
-    const id = identifier || username;
-    const q = { $or: [{ username: String(id).toLowerCase().trim() }] };
+    const id = String(identifier || username).toLowerCase().trim();
+    const q = { $or: [{ username: id }] };
     // if identifier looks like an email, search by email too
     if (String(id).includes('@')) q.$or.push({ email: String(id).toLowerCase().trim() });
     let u = await User.findOne(q);
@@ -75,7 +75,19 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const ok = await bcrypt.compare(pwd, u.password);
+    console.log(`[auth.login] user found: id=${u && u._id} username=${u && u.username} passwordPresent=${!!(u && u.password)}`);
+    if (!u || !u.password) {
+      console.warn('[auth.login] missing user or stored password - rejecting login');
+      return res.status(401).json({ error: 'invalid_credentials', detail: 'no_local_password' });
+    }
+
+    let ok = false;
+    try {
+      ok = await bcrypt.compare(pwd, u.password);
+    } catch (bcryptErr) {
+      console.error('auth.login bcrypt.compare error', bcryptErr && bcryptErr.stack ? bcryptErr.stack : bcryptErr);
+      return res.status(500).json({ error: 'server_error', detail: 'bcrypt_failed' });
+    }
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
     const token = jwt.sign({ sub: u._id.toString(), role: u.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
     const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
