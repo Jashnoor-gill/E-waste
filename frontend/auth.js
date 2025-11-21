@@ -7,9 +7,16 @@ async function requestJson(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  const data = await res.json().catch(()=>({}));
-  if (!res.ok) throw data;
-  return data;
+  // Try parsing JSON response; if that fails, return raw text for diagnostics
+  let parsed;
+  try { parsed = await res.json(); }
+  catch (e) { parsed = await res.text().catch(() => null); }
+  if (!res.ok) {
+    // Throw an object containing status and server body to aid debugging
+    const err = { status: res.status, body: parsed };
+    throw err;
+  }
+  return parsed;
 }
 
 export async function register(formEl) {
