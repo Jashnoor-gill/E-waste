@@ -1,7 +1,7 @@
 // Import rewards and utilities
 import { getUserStats, calculateImpact, getEarnedBadges, BADGES, EWASTE_CATEGORIES } from './rewards.js';
 import { renderBinGrid, renderCategorySelector, sortBinsByAvailability } from './bin-selector.js';
-import { createDepositsChart, createCategoryChart, createImpactChart, createCollectionsChart } from './dashboard-charts.js';
+import { createDepositsChart, createCategoryChart, createCollectionsChart } from './dashboard-charts.js';
 import { getBins, getEvents, getStats, postEvent, getUsers, createBin, updateBin, updateStats, updateUser, deleteUser, deleteBin } from './api.js';
 
 const dashboardContent = document.getElementById('dashboardContent');
@@ -9,8 +9,12 @@ const dashboardContent = document.getElementById('dashboardContent');
 // Enhanced Bin User Dashboard with all new features
 async function renderBinUserDashboard() {
   try {
-    const [bins, events] = await Promise.all([getBins(), getEvents()]);
-  const userEvents = events.filter(e => e.type === 'deposit');
+    const [bins, events] = await Promise.all([getBins(), getEvents(currentUserId)]);
+  // Determine current user id (stored after login)
+  let currentUserId = null;
+  try { const su = localStorage.getItem('ew_user'); if (su) { const u = JSON.parse(su); currentUserId = u.id || u._id || u._id; } } catch(e) {}
+  // Prefer filtering events by current user when possible
+  const userEvents = events.filter(e => e.type === 'deposit' && (!currentUserId || (e.user && ((e.user._id && String(e.user._id) === String(currentUserId)) || (e.user.id && String(e.user.id) === String(currentUserId)) || String(e.user) === String(currentUserId)))));
   
   // Calculate user statistics
   const userStats = getUserStats(userEvents);
@@ -63,24 +67,7 @@ async function renderBinUserDashboard() {
       </div>
     </div>
     
-    <!-- Impact Metrics -->
-    <div class="impact-grid slide-in-up" style="animation-delay: 0.4s">
-      <div class="impact-card">
-        <div class="icon">💧</div>
-        <div class="value">${impact.waterSaved}</div>
-        <div class="label">Liters of water saved</div>
-      </div>
-      <div class="impact-card">
-        <div class="icon">⚡</div>
-        <div class="value">${impact.energySaved}</div>
-        <div class="label">kWh energy saved</div>
-      </div>
-      <div class="impact-card">
-        <div class="icon">🌳</div>
-        <div class="value">${impact.treesEquivalent}</div>
-        <div class="label">Trees planted equivalent</div>
-      </div>
-    </div>
+    <!-- Impact Metrics (only CO2 retained) -->
     
     <!-- Deposit Button -->
     <button id="openDepositModal" class="btn" style="font-size:1.1rem; padding:1rem 2rem; margin:2rem 0">
@@ -103,12 +90,7 @@ async function renderBinUserDashboard() {
         </div>
       </div>
       
-      <div class="chart-container slide-in-up" style="animation-delay: 0.7s">
-        <h3>🌍 Impact Comparison</h3>
-        <div style="height:200px; position:relative">
-          <canvas id="impactChart"></canvas>
-        </div>
-      </div>
+      <!-- Impact comparison removed: site shows CO2 saved in the stat cards -->
     </div>
     
     <!-- Recent History -->
@@ -160,7 +142,7 @@ async function renderBinUserDashboard() {
       if (Object.keys(userStats.categoryBreakdown).length > 0) {
         createCategoryChart('categoryChart', userStats.categoryBreakdown);
       }
-      createImpactChart('impactChart', impact);
+      // impact chart removed: only CO2 shown as a stat card
     }
   }, 100);
   } catch (err) {

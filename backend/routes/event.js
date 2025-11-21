@@ -8,7 +8,13 @@ const router = express.Router();
 // Get all events
 router.get('/', async (req, res) => {
   try {
-    const events = await Event.find().populate('user bin');
+    const q = {};
+    // support optional user filter: /api/events?user=<userId>
+    if (req.query && req.query.user) {
+      // validate ObjectId
+      if (mongoose.Types.ObjectId.isValid(req.query.user)) q.user = req.query.user;
+    }
+    const events = await Event.find(q).populate('user bin');
     res.json(events);
   } catch (err) {
     console.error('Error fetching events', err);

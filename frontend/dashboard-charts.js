@@ -100,66 +100,7 @@ export function createCategoryChart(canvasId, categoryBreakdown) {
 }
 
 // Create impact comparison chart
-export function createImpactChart(canvasId, impact) {
-  const ctx = document.getElementById(canvasId);
-  if (!ctx) return;
-  
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['CO₂ Saved', 'Water Saved', 'Energy Saved', 'Trees Equiv.'],
-      datasets: [{
-        label: 'Environmental Impact',
-        data: [
-          parseFloat(impact.co2Saved),
-          parseFloat(impact.waterSaved) / 10, // Scale down for visibility
-          parseFloat(impact.energySaved),
-          parseFloat(impact.treesEquivalent) * 10 // Scale up for visibility
-        ],
-        backgroundColor: [
-          'rgba(67, 160, 71, 0.8)',
-          'rgba(33, 150, 243, 0.8)',
-          'rgba(255, 193, 7, 0.8)',
-          'rgba(76, 175, 80, 0.8)'
-        ],
-        borderColor: [
-          '#43a047',
-          '#2196f3',
-          '#ffc107',
-          '#4caf50'
-        ],
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.label;
-              const value = context.parsed.y;
-              if (label === 'Water Saved') return `${(value * 10).toFixed(0)} liters`;
-              if (label === 'Trees Equiv.') return `${(value / 10).toFixed(1)} trees`;
-              if (label === 'CO₂ Saved') return `${value.toFixed(2)} kg`;
-              if (label === 'Energy Saved') return `${value.toFixed(1)} kWh`;
-              return `${value}`;
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true
-        }
-      }
-    }
-  });
-}
+// Impact chart removed: site now shows CO2 as a stat card only.
 
 // Create progress ring (circular progress bar)
 export function createProgressRing(percentage, size = 120) {

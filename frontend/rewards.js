@@ -94,10 +94,7 @@ export const EWASTE_CATEGORIES = {
 export function calculateImpact(totalWeight) {
   // Average values based on e-waste recycling studies
   return {
-    co2Saved: (totalWeight * 2.5).toFixed(2), // 2.5 kg CO2 per kg e-waste
-    waterSaved: (totalWeight * 15).toFixed(0), // 15 liters per kg
-    energySaved: (totalWeight * 5).toFixed(1), // 5 kWh per kg
-    treesEquivalent: (totalWeight * 0.05).toFixed(1) // Trees planted equivalent
+    co2Saved: (totalWeight * 2.5).toFixed(2) // 2.5 kg CO2 per kg e-waste
   };
 }
 

@@ -22,6 +22,7 @@ import threading
 from datetime import datetime
 
 import requests
+import subprocess
 
 try:
     import socketio
@@ -233,6 +234,21 @@ def on_run_model(payload):
         print('Emitted iot-model-result', payload_out)
     except Exception as e:
         print('Failed to emit model result:', e)
+    # Optionally run the full machinery on-device (capture -> classify -> actuate)
+    try:
+        if params.get('run_main'):
+            def _run_main_async():
+                try:
+                    main_py = os.path.join(os.path.dirname(__file__), 'Scripts', 'main.py')
+                    print('Running local main.py for full actuation:', main_py)
+                    subprocess.run([sys.executable, main_py], check=True)
+                    print('Local main.py completed')
+                except Exception as ex:
+                    print('Failed to run main.py:', ex)
+            t = threading.Thread(target=_run_main_async, daemon=True)
+            t.start()
+    except Exception as e:
+        print('Error scheduling main.py run:', e)
 
 
 @sio.on('capture')
