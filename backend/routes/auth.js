@@ -73,11 +73,22 @@ router.post('/login', async (req, res) => {
       } catch (err) {
         // possible duplicate key if created concurrently
         if (err && err.code === 11000) {
-          u = await User.findOne(q);
-          if (!u) return res.status(500).json({ error: 'server_error' });
+          try {
+            u = await User.findOne(q);
+            if (!u) {
+              console.error('auth.login create user duplicate_key but subsequent findOne returned null', JSON.stringify(err, null, 2));
+              console.error('stack >>>', err && err.stack);
+              return res.status(500).json({ error: 'server_error', detail: 'duplicate_key_find_failed' });
+            }
+          } catch (innerErr) {
+            console.error('auth.login duplicate_key findOne failed', JSON.stringify(innerErr, null, 2));
+            console.error('stack >>>', innerErr && innerErr.stack);
+            return res.status(500).json({ error: 'server_error', detail: 'duplicate_find_failed' });
+          }
         } else {
-          console.error('auth.login create user error', err);
-          return res.status(500).json({ error: 'server_error' });
+          console.error('auth.login create user error >>>', (() => { try { return JSON.stringify(err, null, 2); } catch(e) { return String(err); } })());
+          console.error('stack >>>', err && err.stack);
+          return res.status(500).json({ error: 'server_error', detail: 'create_failed' });
         }
       }
     }
