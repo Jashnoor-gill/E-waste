@@ -5,12 +5,21 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
+// Lightweight request logger for auth routes to aid debugging login/register failures.
+router.use((req, res, next) => {
+  try {
+    console.log(`[auth] ${req.method} ${req.path} - body keys: ${req.body ? Object.keys(req.body).join(',') : '<no-body>'}`);
+  } catch (e) { console.log('[auth] logger error', e); }
+  return next();
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-in-production';
 const TOKEN_EXPIRY = process.env.JWT_EXPIRY || '7d';
 
 // Register new user
 router.post('/register', async (req, res) => {
   try {
+    console.log('[auth.register] payload:', JSON.stringify(req.body).slice(0, 1000));
     const { name, email, username, password, role } = req.body;
     // Require username and password for registration. Email and name are optional.
     if (!username || !password) return res.status(400).json({ error: 'username,password required' });
@@ -25,7 +34,7 @@ router.post('/register', async (req, res) => {
     const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
     return res.json({ token, user: out });
   } catch (err) {
-    console.error('auth.register error', err);
+    console.error('auth.register error', err && err.stack ? err.stack : err);
     // handle duplicate key errors gracefully
     if (err && err.code === 11000) return res.status(409).json({ error: 'duplicate_key' });
     return res.status(500).json({ error: 'server_error' });
@@ -35,6 +44,7 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
+    console.log('[auth.login] payload:', JSON.stringify(req.body).slice(0, 1000));
     const { identifier, username, password } = req.body;
     const pwd = password;
     if ((!identifier && !username) || !pwd) return res.status(400).json({ error: 'identifier_or_username,password required' });
@@ -71,7 +81,7 @@ router.post('/login', async (req, res) => {
     const out = { id: u._id, name: u.name, username: u.username, email: u.email, role: u.role, points: u.points };
     return res.json({ token, user: out });
   } catch (err) {
-    console.error('auth.login error', err);
+    console.error('auth.login error', err && err.stack ? err.stack : err);
     return res.status(500).json({ error: 'server_error' });
   }
 });
