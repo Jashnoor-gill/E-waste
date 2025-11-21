@@ -8,7 +8,9 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const stats = await Stat.findOne();
-    res.json(stats);
+    // When no stats document exists, respond with an empty object
+    // so callers (frontend) don't receive `null`.
+    res.json(stats || {});
   } catch (err) {
     console.error('Error fetching stats', err);
     // Return empty stats object when DB is unavailable
