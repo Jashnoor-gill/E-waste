@@ -52,7 +52,14 @@ router.post('/login', async (req, res) => {
     const q = { $or: [{ username: id }] };
     // if identifier looks like an email, search by email too
     if (String(id).includes('@')) q.$or.push({ email: String(id).toLowerCase().trim() });
-    let u = await User.findOne(q);
+    let u;
+    try {
+      u = await User.findOne(q);
+      console.log('[auth.login] findOne completed');
+    } catch (dbErr) {
+      console.error('auth.login DB findOne error', dbErr && dbErr.stack ? dbErr.stack : dbErr);
+      return res.status(500).json({ error: 'server_error', detail: 'db_find_failed' });
+    }
     // If user does not exist, auto-create (username-first flow)
     if (!u) {
       try {
