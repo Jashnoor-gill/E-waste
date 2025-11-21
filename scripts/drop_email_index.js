@@ -17,7 +17,8 @@ async function main() {
     process.exit(2);
   }
 
-  const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+  // Newer mongodb drivers ignore/use a default set of options; do not pass deprecated options.
+  const client = new MongoClient(mongoUri);
   try {
     await client.connect();
     const db = client.db();
