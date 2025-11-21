@@ -27,11 +27,35 @@ export async function login(formEl) {
   const fd = new FormData(formEl);
   // Send username (or identifier) to the backend
   const body = { username: fd.get('username'), password: fd.get('password') };
-  const r = await requestJson('/auth/login', body);
-  if (r && r.token) {
-    localStorage.setItem('ew_token', r.token);
-    localStorage.setItem('ew_user', JSON.stringify(r.user));
-    window.location.href = 'dashboard.html';
+  try {
+    const r = await requestJson('/auth/login', body);
+    if (r && r.token) {
+      localStorage.setItem('ew_token', r.token);
+      localStorage.setItem('ew_user', JSON.stringify(r.user));
+      window.location.href = 'dashboard.html';
+      return;
+    }
+  } catch (err) {
+    // If login failed due to invalid credentials or the remote does not
+    // support login-first auto-create, attempt to register the user now.
+    try {
+      if (err && err.error && (err.error === 'invalid_credentials' || err.error === 'not_found' || err.error === 'identifier_or_username,password required')) {
+        // Try to register the user with the same username/password
+        const regBody = { username: body.username, password: body.password, name: body.username };
+        const reg = await requestJson('/auth/register', regBody);
+        if (reg && reg.token) {
+          localStorage.setItem('ew_token', reg.token);
+          localStorage.setItem('ew_user', JSON.stringify(reg.user));
+          window.location.href = 'dashboard.html';
+          return;
+        }
+      }
+    } catch (regErr) {
+      // If registration also failed, surface the original login error
+      throw regErr;
+    }
+    // If not handled above, rethrow the original error
+    throw err;
   }
 }
 
