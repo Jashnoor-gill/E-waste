@@ -46,7 +46,9 @@ export async function login(formEl) {
     // If login failed due to invalid credentials or the remote does not
     // support login-first auto-create, attempt to register the user now.
     try {
-      if (err && err.error && (err.error === 'invalid_credentials' || err.error === 'not_found' || err.error === 'identifier_or_username,password required')) {
+      const serverErr = (err && err.body) ? err.body : err;
+      const serverCode = serverErr && serverErr.error ? serverErr.error : null;
+      if (err && (err.status === 401 || serverCode === 'invalid_credentials' || serverCode === 'not_found' || serverCode === 'identifier_or_username,password required')) {
         // Try to register the user with the same username/password
         const regBody = { username: body.username, password: body.password, name: body.username };
         const reg = await requestJson('/auth/register', regBody);
