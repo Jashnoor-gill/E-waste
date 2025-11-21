@@ -26,7 +26,7 @@ export async function register(formEl) {
   if (r && r.token) {
     localStorage.setItem('ew_token', r.token);
     localStorage.setItem('ew_user', JSON.stringify(r.user));
-    window.location.href = 'dashboard.html';
+    window.location.href = 'index.html';
   }
 }
 
@@ -39,7 +39,7 @@ export async function login(formEl) {
     if (r && r.token) {
       localStorage.setItem('ew_token', r.token);
       localStorage.setItem('ew_user', JSON.stringify(r.user));
-      window.location.href = 'dashboard.html';
+      window.location.href = 'index.html';
       return;
     }
   } catch (err) {
@@ -55,7 +55,7 @@ export async function login(formEl) {
         if (reg && reg.token) {
           localStorage.setItem('ew_token', reg.token);
           localStorage.setItem('ew_user', JSON.stringify(reg.user));
-          window.location.href = 'dashboard.html';
+          window.location.href = 'index.html';
           return;
         }
       }
