@@ -103,6 +103,8 @@ import iotRoutes from './iot/iot.js';
 import runModelRouter from './iot/run_model.js';
 app.use('/api/iot', runModelRouter);
 app.use('/api/iot', iotRoutes);
+import runRemoteRouter from './iot/run_remote.js';
+app.use('/api/iot', runRemoteRouter);
 import frameRouter, { attachFrames } from './iot/frame_server.js';
 app.use('/api/frame', frameRouter);
 // expose the in-memory frames map from the frame router to the app so

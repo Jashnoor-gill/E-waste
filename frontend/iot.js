@@ -43,8 +43,7 @@ function setupUi() {
   const resultContainer = document.getElementById('iotModelResult');
   const startPiFeedBtn = document.getElementById('startPiFeedBtn');
   const stopPiFeedBtn = document.getElementById('stopPiFeedBtn');
-  const startPiCameraBtn = document.getElementById('startPiCameraBtn');
-  const stopPiCameraBtn = document.getElementById('stopPiCameraBtn');
+  // Pi camera start/stop controls removed — no DOM elements expected
   const piDeviceIdInput = document.getElementById('piDeviceIdInput');
   const checkFillBtn = document.getElementById('checkFillBtn');
   const binLevelResult = document.getElementById('binLevelResult');
@@ -63,8 +62,6 @@ function setupUi() {
   // Local browser webcam support removed; captures come from the Pi device.
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
-  if (startPiCameraBtn) startPiCameraBtn.addEventListener('click', () => startPiCamera());
-  if (stopPiCameraBtn) stopPiCameraBtn.addEventListener('click', () => stopPiCamera());
   if (checkFillBtn) checkFillBtn.addEventListener('click', async () => {
     try {
       const id = (piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value.trim() : '';
@@ -481,42 +478,7 @@ let _piCameraInterval = null;
 let _piCaptureInFlight = false;
 let _piCameraIntervalMs = 3000; // default capture interval when camera is "on"
 
-function startPiCamera(deviceId) {
-  deviceId = deviceId || (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) || 'raspi-1';
-  // start feed (SSE + initial fetch)
-  try { if (window.startPiFeed) window.startPiFeed(deviceId); } catch(e){}
-  // avoid starting multiple intervals
-  if (_piCameraInterval) return;
-  _piCaptureInFlight = false;
-  // immediate first capture
-  (async () => {
-    if (!_piCaptureInFlight) {
-      try { _piCaptureInFlight = true; await requestCapture(); } catch(e) { _piCaptureInFlight = false; }
-    }
-  })();
-  _piCameraInterval = setInterval(async () => {
-    if (_piCaptureInFlight) return;
-    _piCaptureInFlight = true;
-    try {
-      await requestCapture();
-    } catch (e) {
-      console.warn('Periodic requestCapture failed', e);
-      _piCaptureInFlight = false;
-    }
-  }, _piCameraIntervalMs);
-  // update UI buttons if present
-  try { const s = document.getElementById('startPiCameraBtn'); const t = document.getElementById('stopPiCameraBtn'); if (s) s.disabled = true; if (t) t.disabled = false; } catch(e){}
-}
-
-function stopPiCamera() {
-  if (_piCameraInterval) { clearInterval(_piCameraInterval); _piCameraInterval = null; }
-  _piCaptureInFlight = false;
-  // stop feed if desired
-  try { if (window.stopPiFeed) window.stopPiFeed(); } catch(e){}
-  try { const s = document.getElementById('startPiCameraBtn'); const t = document.getElementById('stopPiCameraBtn'); if (s) s.disabled = false; if (t) t.disabled = true; } catch(e){}
-}
-
-try { window.startPiCamera = startPiCamera; window.stopPiCamera = stopPiCamera; } catch(e) {}
+// Pi camera periodic capture removed: use Start/Stop Pi Feed and Run Model instead.
 
 function renderModelResult(result) {
   const rc = document.getElementById('iotModelResult');
