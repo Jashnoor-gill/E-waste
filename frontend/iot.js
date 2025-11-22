@@ -72,8 +72,8 @@ function setupUi() {
         alert('Please enter a Device ID or Bin identifier first');
         return;
       }
+      // If mock enabled, keep existing mock behavior
       if (typeof getMockEnabled === 'function' && getMockEnabled()) {
-        // Use frontend mock data
         try {
           if (binLevelResult) binLevelResult.innerHTML = '<div class="card" style="padding:0.75rem">Checking fill level (mock)...</div>';
           const bins = await getBins();
@@ -82,17 +82,14 @@ function setupUi() {
             if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Mock: Bin not found: ${id}</div>`;
             return;
           }
-          // determine level: prefer `fillKg` and `capacityKg` if present, else `level` if present
+          // Reuse existing mock flow to compute level
           let levelVal = null;
           if (typeof b.fillKg === 'number' && typeof b.capacityKg === 'number' && b.capacityKg > 0) levelVal = (b.fillKg / b.capacityKg) * 100.0;
           else if (typeof b.level === 'number') levelVal = b.level;
-          else levelVal = Math.round((Math.random() * 60 + 10) * 10) / 10; // random fallback 10-70%
-
-          // approximate distance based on level (empty ~80cm, full ~10cm)
+          else levelVal = Math.round((Math.random() * 60 + 10) * 10) / 10;
           const empty = (b.empty_distance_cm && typeof b.empty_distance_cm === 'number') ? b.empty_distance_cm : 80.0;
           const full = (b.full_distance_cm && typeof b.full_distance_cm === 'number') ? b.full_distance_cm : 10.0;
           const dist = Math.max(full, Math.min(empty, empty - (levelVal/100.0) * (empty - full)));
-
           const levelStr = `${Number(levelVal).toFixed(1)}%`;
           const distStr = `${Number(dist).toFixed(1)} cm`;
           const status = (levelVal >= 95) ? 'full' : (levelVal >= 70 ? 'collecting' : 'available');
@@ -114,24 +111,17 @@ function setupUi() {
         }
       }
 
-      const url = `${ORIGIN.replace(/\/$/, '')}/api/bins/${encodeURIComponent(id)}/level`;
-      if (binLevelResult) binLevelResult.innerHTML = '<div class="card" style="padding:0.75rem">Checking fill level...</div>';
-      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-      if (!res.ok) {
-        const txt = await res.text().catch(() => `Status ${res.status}`);
-        if (binLevelResult) binLevelResult.innerHTML = `<div class="card" style="padding:0.75rem; color:#c62828">Error: ${txt}</div>`;
-        return;
-      }
-      const j = await res.json();
-      const level = (typeof j.level === 'number') ? `${j.level.toFixed(1)}%` : (j.level == null ? 'N/A' : String(j.level));
-      const dist = (typeof j.distance_cm === 'number') ? `${j.distance_cm.toFixed(1)} cm` : (j.distance_cm == null ? 'N/A' : String(j.distance_cm));
-      const status = j.status || 'unknown';
-      const updated = j.lastUpdated ? new Date(j.lastUpdated).toLocaleString() : 'unknown';
+      // Non-mock mode: hardcode ultrasonic output to 0% fill level as requested
+      const levelVal = 0.0;
+      const levelStr = `${Number(levelVal).toFixed(1)}%`;
+      const distStr = `80.0 cm`;
+      const status = 'available';
+      const updated = new Date().toLocaleString();
       if (binLevelResult) binLevelResult.innerHTML = `
         <div class="card" style="padding:0.75rem">
-          <div><strong>Bin:</strong> ${j.bin_id}</div>
-          <div><strong>Level:</strong> ${level}</div>
-          <div><strong>Distance:</strong> ${dist}</div>
+          <div><strong>Bin:</strong> ${id}</div>
+          <div><strong>Level:</strong> ${levelStr}</div>
+          <div><strong>Distance:</strong> ${distStr}</div>
           <div><strong>Status:</strong> ${status}</div>
           <div style="font-size:0.85rem; color:#666"><strong>Updated:</strong> ${updated}</div>
         </div>

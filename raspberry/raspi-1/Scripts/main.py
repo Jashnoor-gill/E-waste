@@ -12,6 +12,8 @@ from capture_image import capture  # <-- added this import
 '''Add catagory to stepper '''
 
 
+import argparse
+
 # This sets the *default* factory for all gpiozero devices
 Device.pin_factory = PiGPIOFactory()
 
@@ -38,32 +40,59 @@ CATEGORY_MAP = {
 
 
 def main():
-    a_time=time.time()
-    print("Capturing image...")
-    image_path = capture()  # capture and get file path
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--label', help='Optional predicted label to actuate on (skip capture/classify)')
+    parser.add_argument('--actuate-only', action='store_true', help='Run actuators only (no capture/classify)')
+    args = parser.parse_args()
 
-    print("Running classification...")
-    label = classify_image(str(image_path))
+    a_time = time.time()
 
-    print(f"\n✅ Final Prediction: {label}\n")
+    label = None
+    if args.label:
+        label = args.label
+        print(f'Received label from caller, skipping capture/classify: {label}')
+    elif args.actuate_only:
+        print('actuate-only requested but no label provided; nothing to do')
+        return
+    else:
+        print('Capturing image...')
+        image_path = capture()  # capture and get file path
 
- 
+        print('Running classification...')
+        try:
+            label = classify_image(str(image_path))
+        except Exception as e:
+            print('Classification failed:', e)
+            label = None
+
+        print(f"\n✅ Final Prediction: {label}\n")
+
+    if not label:
+        print('No valid label; skipping actuation')
+        return
+
     category_number = CATEGORY_MAP.get(label)
     print(f"Waste falls in Category: {category_number}")
 
-    # Motor Control 
-    new_stepper_code.move_to_category(category_number)
-    time.sleep(3)  # Wait a moment at the category position
-    servo_control.run_servo()
-    time.sleep(3)  # Wait a moment before returning
-    new_stepper_code.return_to_initial(category_number)
-    time.sleep(1)
+    if category_number is None:
+        print('No category mapping for label; skipping motor/servo actions')
+    else:
+        # Motor Control 
+        new_stepper_code.move_to_category(category_number)
+        time.sleep(3)  # Wait a moment at the category position
+        servo_control.run_servo()
+        time.sleep(3)  # Wait a moment before returning
+        new_stepper_code.return_to_initial(category_number)
+        time.sleep(1)
 
 
 
 
     # Finally, close the factory
-    Device.pin_factory.close()
+    try:
+        Device.pin_factory.close()
+    except Exception:
+        pass
     print("Shared pigpio factory closed.")
     b_time=time.time()
     print(f"Total runtime:{b_time-a_time}")

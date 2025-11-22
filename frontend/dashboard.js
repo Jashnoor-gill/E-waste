@@ -9,10 +9,20 @@ const dashboardContent = document.getElementById('dashboardContent');
 // Enhanced Bin User Dashboard with all new features
 async function renderBinUserDashboard() {
   try {
-    const [bins, events] = await Promise.all([getBins(), getEvents(currentUserId)]);
   // Determine current user id (stored after login)
   let currentUserId = null;
   try { const su = localStorage.getItem('ew_user'); if (su) { const u = JSON.parse(su); currentUserId = u.id || u._id || u._id; } } catch(e) {}
+  // Fetch bins and events but tolerate backend failures so the UI still renders locally
+  let bins = [];
+  let events = [];
+  try {
+    [bins, events] = await Promise.all([getBins(), getEvents()]);
+  } catch (fetchErr) {
+    console.warn('Failed to fetch bins/events for Bin User dashboard:', fetchErr);
+    // leave bins/events as empty arrays so the page still renders
+    bins = [];
+    events = [];
+  }
   // Prefer filtering events by current user when possible
   const userEvents = events.filter(e => e.type === 'deposit' && (!currentUserId || (e.user && ((e.user._id && String(e.user._id) === String(currentUserId)) || (e.user.id && String(e.user.id) === String(currentUserId)) || String(e.user) === String(currentUserId)))));
   

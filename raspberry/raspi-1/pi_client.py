@@ -237,15 +237,29 @@ def on_run_model(payload):
     # Optionally run the full machinery on-device (capture -> classify -> actuate)
     try:
         if params.get('run_main'):
-            def _run_main_async():
+            def _run_main_async(label_for_main=None):
                 try:
                     main_py = os.path.join(os.path.dirname(__file__), 'Scripts', 'main.py')
-                    print('Running local main.py for full actuation:', main_py)
-                    subprocess.run([sys.executable, main_py], check=True)
+                    cmd = [sys.executable, main_py]
+                    # If we have a label from the inference, pass it so main.py can actuate directly
+                    if label_for_main:
+                        cmd += ['--label', str(label_for_main)]
+                    # Respect environment override to disable actuation during testing
+                    if os.environ.get('ENABLE_ACTUATION', '1') in ('0', 'false', 'False'):
+                        print('ENABLE_ACTUATION is false; skipping running main.py')
+                        return
+                    print('Running local main.py for full actuation:', ' '.join(cmd))
+                    subprocess.run(cmd, check=True)
                     print('Local main.py completed')
                 except Exception as ex:
                     print('Failed to run main.py:', ex)
-            t = threading.Thread(target=_run_main_async, daemon=True)
+            # pass the predicted label if available to avoid double-capture
+            predicted_label = None
+            try:
+                predicted_label = result.get('label') if isinstance(result, dict) else None
+            except Exception:
+                predicted_label = None
+            t = threading.Thread(target=_run_main_async, args=(predicted_label,), daemon=True)
             t.start()
     except Exception as e:
         print('Error scheduling main.py run:', e)
@@ -342,6 +356,52 @@ def on_capture(payload):
             print('Failed to emit iot-photo:', e)
     except Exception as e:
         print('capture handler error:', e)
+
+
+@sio.on('check_fill')
+def on_check_fill(payload):
+    """Handle a one-off ultrasonic sensor read triggered by server/UI.
+    Emits `iot-bin-status` with an array of readings: [{ bin_id, distance_cm, fill_percent, ts }, ...]
+    Also POSTs to `BIN_UPDATE_URL` if configured (same behavior as the background monitor).
+    """
+    try:
+        print('check_fill event received:', payload)
+        bins_cfg = load_bins_config()
+        readings = []
+        for cfg in bins_cfg:
+            try:
+                s = SensorWrapper(cfg)
+                d = s.read_distance_cm()
+                p = s.compute_fill(d)
+            except Exception as e:
+                d = None
+                p = None
+            rec = {'bin_id': cfg.get('id') or cfg.get('bin_id') or cfg.get('name'), 'distance_cm': d, 'fill_percent': p}
+            readings.append(rec)
+
+        # Emit via socket so backend/UI receives immediate result
+        try:
+            sio.emit('iot-bin-status', {'device': args.name, 'readings': readings})
+            print('Emitted iot-bin-status', {'device': args.name, 'count': len(readings)})
+        except Exception as e:
+            print('Failed to emit iot-bin-status:', e)
+
+        # Also POST to BIN_UPDATE_URL for each bin if configured
+        if BIN_UPDATE_URL:
+            for r in readings:
+                payload_out = {
+                    'bin_id': r.get('bin_id'),
+                    'distance_cm': r.get('distance_cm'),
+                    'fill_percent': r.get('fill_percent')
+                }
+                try:
+                    resp = requests.post(BIN_UPDATE_URL, json=payload_out, timeout=5)
+                    print(f'[ultrasonic] posted {payload_out.get("bin_id")}: {resp.status_code}')
+                except Exception as e:
+                    print(f'[ultrasonic] failed POST for {payload_out.get("bin_id")}: {e}')
+
+    except Exception as e:
+        print('check_fill handler error:', e)
 
 
 @sio.on('disconnect')

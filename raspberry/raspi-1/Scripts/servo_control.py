@@ -35,7 +35,7 @@ servo_2 = gpiozero.Servo(
 # Start in the "closed" (max) position
 print("Moving servos to initial 'Closed' (max) position.")
 servo_1.value = 0.9    # servo 1 at max position
-servo_2.value = 0   # servo 2 at max position
+servo_2.value = -0.4   # servo 2 at max position
 time.sleep(1)
 servo_1.value = None  # Detach to stop jitter
 servo_2.value = None  # Detach to stop jitter
@@ -64,7 +64,7 @@ def run_servo():
     print("Closing servos...")
     servo_1.value = 0.9    # servo1 max
     time.sleep(0.1)
-    servo_2.value = 0   # servo2 max
+    servo_2.value = -0.4   # servo2 max
     print("Servos closed.")
 
     time.sleep(1)  # Give them time to move

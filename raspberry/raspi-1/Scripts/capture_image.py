@@ -1,49 +1,81 @@
-import cv2
 import time
 import datetime
 from pathlib import Path
+import subprocess
+
+
+def _photos_dir():
+    p = Path(__file__).resolve().parent.parent / "Photos"
+    p.mkdir(exist_ok=True)
+    return p
+
+
+def _libcamera_capture(out_path: Path, width=1280, height=720):
+    """Use libcamera-still to capture a photo. Returns True on success."""
+    cmd = [
+        'libcamera-still', '-n',
+        '-o', str(out_path),
+        '--width', str(width),
+        '--height', str(height)
+    ]
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except Exception as e:
+        # libcamera may not be available on this system
+        print('libcamera capture failed:', e)
+        return False
+
 
 def capture():
-    photos_dir = Path(__file__).resolve().parent.parent / "Photos"
-    photos_dir.mkdir(exist_ok=True)
+    """Capture an image. Prefer OpenCV; if unavailable or camera open fails,
+    fall back to `libcamera-still` (Raspberry Pi). Returns the saved filepath or None.
+    """
+    photos_dir = _photos_dir()
     base_path = photos_dir / "captured_image"
-
-    cam = cv2.VideoCapture(0)
-
-    # --- UPDATED FOR YOUR SPECS ---
-    # Set resolution to your camera's native HD 720p
-    cam.set(3, 1280) # 3 is CAP_PROP_FRAME_WIDTH
-    cam.set(4, 720)  # 4 is CAP_PROP_FRAME_HEIGHT
-    
-    # Check what resolution was
-    width = cam.get(3)
-    height = cam.get(4)
-    print(f"Attempted 1280x720, camera is set to: {width}x{height}")
-
-    # --- KEEP THIS ---
-    # Give the camera 3 seconds to adjust its Auto White Balance and auto-exposure
-    time.sleep(3) 
-
-    # Read and discard a few frames to clear the buffer
-    img = None
-    for _ in range(5):
-        ret, img = cam.read()
-        if not ret:
-            print("Failed to capture image")
-            cam.release()
-            return None
-
-    # --- RECOMMENDATION ---
-    # Save as .png for perfect, lossless quality.
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{base_path}_{timestamp}.png" 
-    
-    cv2.imwrite(str(filename), img)
-    print(f"Image saved as {filename}")
+    filename = f"{base_path}_{timestamp}.jpg"
 
-    cam.release()
-    # cv2.destroyAllWindows()
-    return filename
+    # Try OpenCV first (if installed)
+    try:
+        import cv2
+        try:
+            cam = cv2.VideoCapture(0)
+            cam.set(3, 1280)
+            cam.set(4, 720)
+            # allow camera to warm up
+            time.sleep(2)
+            img = None
+            success = False
+            for _ in range(5):
+                ret, img = cam.read()
+                if ret and img is not None:
+                    success = True
+                    break
+            cam.release()
+            if success:
+                # write as jpeg to reduce size
+                cv2.imwrite(str(filename), img)
+                print(f'Image saved as {filename} (cv2)')
+                return str(filename)
+            else:
+                print('OpenCV capture failed or returned no frames')
+        except Exception as e:
+            print('OpenCV capture error:', e)
+    except Exception:
+        # cv2 not installed
+        pass
+
+    # Fallback: try libcamera-still (works on Raspberry Pi OS with camera stack)
+    outp = Path(filename)
+    ok = _libcamera_capture(outp)
+    if ok and outp.exists():
+        print(f'Image saved as {outp} (libcamera)')
+        return str(outp)
+
+    # As last resort, return None
+    print('No image captured; all methods failed')
+    return None
 
 # --- Other spec notes ---
 # - Driverless: This is why cv2.VideoCapture(0) works easily.
