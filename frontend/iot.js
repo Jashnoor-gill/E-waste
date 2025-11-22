@@ -62,6 +62,8 @@ function setupUi() {
   // Local browser webcam support removed; captures come from the Pi device.
   if (startPiFeedBtn) startPiFeedBtn.addEventListener('click', () => startPiFeed());
   if (stopPiFeedBtn) stopPiFeedBtn.addEventListener('click', () => stopPiFeed());
+  const startSegregationBtn = document.getElementById('startSegregationBtn');
+  if (startSegregationBtn) startSegregationBtn.addEventListener('click', () => startSegregation());
   if (checkFillBtn) checkFillBtn.addEventListener('click', async () => {
     try {
       const id = (piDeviceIdInput && piDeviceIdInput.value) ? piDeviceIdInput.value.trim() : '';
@@ -584,6 +586,40 @@ async function requestRunModel() {
   } catch (err) {
     console.error('run model request failed', err);
     alert('Run model request failed: ' + err.message);
+    showModelLoading(false);
+  }
+}
+
+// Start segregation on the device: this requests the device to run its local
+// `Scripts/main.py` handler by calling the same `/api/iot/run-model` endpoint
+// but with `run_main: true`. The Pi client listens for `run_model` and will
+// invoke `main.py` when `params.run_main` is set.
+async function startSegregation() {
+  try {
+    showModelLoading(true);
+    if (getMockEnabled && getMockEnabled()) {
+      alert('Mock: Segregation simulated (no device will run).');
+      showModelLoading(false);
+      return;
+    }
+
+    const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
+    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
+    const body = { replySocketId: socket.id, deviceName, run_main: true };
+    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => `Status ${res.status}`);
+      throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
+    }
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* ignore parse errors */ }
+    // Inform the user that the request was accepted. Actual actuation happens on-device.
+    try { alert('Segregation requested. Device will run segregation when it receives the command.'); } catch(e){}
+    showModelLoading(false);
+    console.log('startSegregation response', data);
+  } catch (err) {
+    console.error('startSegregation failed', err);
+    try { alert('Failed to start segregation: ' + String(err)); } catch(e){}
     showModelLoading(false);
   }
 }
