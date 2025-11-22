@@ -603,20 +603,24 @@ async function startSegregation() {
       return;
     }
 
-    const deviceName = (document.getElementById('piDeviceIdInput') && document.getElementById('piDeviceIdInput').value) ? document.getElementById('piDeviceIdInput').value : 'raspi-1';
-    const runModelUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-model`;
-    const body = { replySocketId: socket.id, deviceName, run_main: true };
-    const res = await fetch(runModelUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // Prefer to run the segregation script on the remote host via SSH-through-backend
+    const runRemoteUrl = `${ORIGIN.replace(/\/$/, '')}/api/iot/run-on-remote`;
+    const payload = {
+      host: 'dp',
+      user: 'dprpi',
+      cmd: 'cd dp && python Scripts/main.py'
+    };
+
+    const res = await fetch(runRemoteUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (!res.ok) {
       const txt = await res.text().catch(() => `Status ${res.status}`);
       throw new Error(`Server error ${res.status}: ${txt.slice(0,200)}`);
     }
     let data = null;
     try { data = await res.json(); } catch (e) { /* ignore parse errors */ }
-    // Inform the user that the request was accepted. Actual actuation happens on-device.
-    try { alert('Segregation requested. Device will run segregation when it receives the command.'); } catch(e){}
+    try { alert('Segregation requested on remote host. See console for SSH output.'); } catch(e){}
     showModelLoading(false);
-    console.log('startSegregation response', data);
+    console.log('startSegregation (remote) response', data);
   } catch (err) {
     console.error('startSegregation failed', err);
     try { alert('Failed to start segregation: ' + String(err)); } catch(e){}
